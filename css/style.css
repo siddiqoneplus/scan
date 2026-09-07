@@ -1627,7 +1627,7 @@ body {
   }
 
   .app-header, .nav-tabs, .section-toolbar, .quick-simulator-bar, .scanner-station-card,
-  .toast-container, .modal-backdrop, .btn, .id-card-actions {
+  .toast-container, .modal-backdrop, .btn, .id-card-actions, .kpi-grid, .google-form-banner, .code-guide-card {
     display: none !important;
   }
 
@@ -1888,4 +1888,55 @@ body {
   font-weight: 600;
   margin-left: 0.3rem;
 }
+
+.row-action-btns {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  justify-content: flex-end;
+}
+
+.modal-lg {
+  max-width: 640px !important;
+}
+
+.modal-divider {
+  display: flex;
+  align-items: center;
+  text-align: center;
+  margin: 1rem 0;
+  color: var(--text-subtle);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+}
+
+.modal-divider::before,
+.modal-divider::after {
+  content: '';
+  flex: 1;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.modal-divider span {
+  padding: 0 0.75rem;
+}
+
+.w-full {
+  width: 100%;
+}
+
+.margin-top-sm {
+  margin-top: 0.5rem;
+}
+
+.max-h-300 {
+  max-height: 280px;
+  overflow-y: auto;
+}
+
+.col-w-80 {
+  width: 80px;
+}
+
 

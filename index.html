@@ -39,19 +39,19 @@
 
     <!-- Nav Tabs -->
     <nav class="nav-tabs" aria-label="Main Navigation">
-      <button class="nav-btn active" data-tab="scanner" id="tabBtnScanner">
+      <button class="nav-btn active" data-tab="scanner" id="tabBtnScanner" onclick="App.switchTab('scanner')">
         <i class="fa-solid fa-camera"></i>
         <span>Live Scanner</span>
       </button>
-      <button class="nav-btn" data-tab="roster" id="tabBtnRoster">
+      <button class="nav-btn" data-tab="roster" id="tabBtnRoster" onclick="App.switchTab('roster')">
         <i class="fa-solid fa-users-viewfinder"></i>
         <span>Admin & Google Form</span>
       </button>
-      <button class="nav-btn" data-tab="cards" id="tabBtnCards">
+      <button class="nav-btn" data-tab="cards" id="tabBtnCards" onclick="App.switchTab('cards')">
         <i class="fa-solid fa-id-card"></i>
         <span>QR ID Studio</span>
       </button>
-      <button class="nav-btn" data-tab="analytics" id="tabBtnAnalytics">
+      <button class="nav-btn" data-tab="analytics" id="tabBtnAnalytics" onclick="App.switchTab('analytics')">
         <i class="fa-solid fa-chart-pie"></i>
         <span>Logs & Analytics</span>
       </button>
@@ -272,7 +272,12 @@
       <div class="code-guide-card">
         <div class="guide-header">
           <span class="guide-title"><i class="fa-solid fa-microchip"></i> University Roll Number Auto-Decoder Matrix:</span>
-          <span class="guide-example">e.g. <code>24A81A4401</code> &rarr; <strong>2024 Batch</strong> + College <code>A8</code> + Degree <code>1A</code> + <strong>Data Science (44)</strong></span>
+          <div class="guide-actions">
+            <span class="guide-example">e.g. <code>24A81A4401</code> &rarr; <strong>2024 Batch</strong> + College <code>A8</code> + Degree <code>1A</code> + <strong>Data Science (44)</strong></span>
+            <button type="button" class="btn btn-secondary btn-sm" onclick="App.openBranchRulesModal()" title="View and add custom branch codes">
+              <i class="fa-solid fa-sliders"></i> Branch Rules
+            </button>
+          </div>
         </div>
         <div class="guide-chips">
           <span class="guide-chip chip-highlight"><strong class="chip-code">26</strong> 2026 Batch (1st Year)</span>
@@ -321,8 +326,20 @@
           </div>
 
           <div class="flex-btn-group">
+            <button class="btn btn-primary btn-sm" onclick="App.openModal('modalAddStudent')" title="Register single student">
+              <i class="fa-solid fa-user-plus"></i> Add Student
+            </button>
+            <button class="btn btn-secondary btn-sm" onclick="App.openModal('modalGoogleForm')" title="Import from Google Form or Excel">
+              <i class="fa-solid fa-file-csv"></i> Import CSV
+            </button>
+            <button class="btn btn-secondary btn-sm" onclick="App.exportRosterCSV()" title="Download CSV backup of whitelist">
+              <i class="fa-solid fa-file-export"></i> Export Whitelist
+            </button>
             <button class="btn btn-secondary btn-sm" onclick="App.resetRosterToDefault()" title="Reload university demo students">
               <i class="fa-solid fa-rotate-left"></i> Reset Demo Data
+            </button>
+            <button class="btn btn-danger btn-sm" onclick="App.clearAllStudents()" title="Clear student whitelist">
+              <i class="fa-solid fa-trash-can"></i> Clear Whitelist
             </button>
           </div>
         </div>
@@ -420,7 +437,12 @@
       <div class="admin-card">
         <div class="section-toolbar">
           <div class="search-filter-group">
-            <input type="date" id="analyticsFilterDate" class="input-styled analytics-date-picker" title="Filter Attendance by Date" aria-label="Filter Attendance by Date" placeholder="YYYY-MM-DD">
+            <div class="flex-gap-xs">
+              <input type="date" id="analyticsFilterDate" class="input-styled analytics-date-picker" title="Filter Attendance by Date" aria-label="Filter Attendance by Date" placeholder="YYYY-MM-DD">
+              <button type="button" class="btn btn-secondary btn-sm" onclick="App.clearAnalyticsDateFilter()" title="Show records from all dates">
+                <i class="fa-solid fa-calendar-xmark"></i> All Dates
+              </button>
+            </div>
             
             <input type="text" id="analyticsSearch" class="input-styled" placeholder="Filter by roll number or name..." title="Filter by roll number or name">
 
@@ -531,19 +553,26 @@
       </div>
       <div class="modal-body">
         <p class="text-muted">
-          Export your Google Form responses as CSV or copy the spreadsheet rows, then paste them below. 
-          The engine will automatically detect <strong>Roll Number</strong>, <strong>Name</strong>, and classify the <strong>Branch & Year</strong>.
+          Import students from Google Forms, Google Sheets, or Microsoft Excel. The engine automatically detects 
+          <strong>Roll Number</strong> and classifies <strong>Branch</strong> and <strong>Academic Year</strong>.
         </p>
 
         <div class="form-group">
+          <label for="gformFileInput"><i class="fa-solid fa-file-arrow-up text-cyan"></i> Option 1: Upload CSV File from Disk</label>
+          <input type="file" id="gformFileInput" accept=".csv,text/csv" class="input-styled w-full" onchange="App.handleGoogleFormFileUpload(this.files[0])">
+        </div>
+
+        <div class="modal-divider"><span>OR PASTE CSV / SHEET ROWS</span></div>
+
+        <div class="form-group">
           <div class="gform-label-row">
-            <label for="gformCsvInput">Paste CSV Data or Tab-Delimited Content:</label>
+            <label for="gformCsvInput">Option 2: Paste Raw CSV Data:</label>
             <button type="button" class="btn btn-secondary btn-sm" onclick="App.loadSampleGoogleFormTemplate()">
               <i class="fa-solid fa-wand-magic-sparkles"></i> Load Sample Google Form Data
             </button>
           </div>
-          <textarea id="gformCsvInput" class="textarea-styled" placeholder="Timestamp,Student Name,Roll Number,Branch,Academic Year&#10;2026/09/01 10:15 AM,Kunal Sen,22B91A0588,Computer Science,3rd Year..."></textarea>
-          <span class="form-hint">Tip: If Branch and Year columns are blank, they will be auto-derived from the student's Roll Number pattern!</span>
+          <textarea id="gformCsvInput" class="textarea-styled" placeholder="Timestamp,Student Name,Roll Number,Branch,Academic Year&#10;2026/09/01 10:15 AM,Kunal Sen,24A81A4401,Data Science,3rd Year..."></textarea>
+          <span class="form-hint">Tip: If Branch and Year columns are blank, they will be automatically decoded from the student's Roll Number!</span>
         </div>
       </div>
       <div class="modal-footer">
@@ -613,6 +642,92 @@
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-secondary" onclick="App.closeModal('modalManageAccounts')">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: EDIT STUDENT (Admin Only) -->
+  <div class="modal-backdrop" id="modalEditStudent">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3><i class="fa-solid fa-user-pen modal-icon-cyan"></i> Edit Student Profile</h3>
+        <button class="btn btn-secondary btn-icon" onclick="App.closeModal('modalEditStudent')">&times;</button>
+      </div>
+      <form id="formEditStudent" onsubmit="App.submitEditStudent(event)">
+        <div class="modal-body">
+          <div class="form-group">
+            <label for="editStudentRoll">Roll Number / Student ID (Permanent)</label>
+            <input type="text" id="editStudentRoll" class="input-styled" readonly required>
+          </div>
+
+          <div class="form-group">
+            <label for="editStudentName">Full Student Name *</label>
+            <input type="text" id="editStudentName" class="input-styled" required>
+          </div>
+
+          <div class="form-group">
+            <label for="editStudentBranch">Assigned Branch *</label>
+            <input type="text" id="editStudentBranch" class="input-styled" required>
+          </div>
+
+          <div class="form-group">
+            <label for="editStudentYear">Academic Year / Batch *</label>
+            <input type="text" id="editStudentYear" class="input-styled" required>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" onclick="App.closeModal('modalEditStudent')">Cancel</button>
+          <button type="submit" class="btn btn-primary"><i class="fa-solid fa-floppy-disk"></i> Update Student</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: CONFIGURE BRANCH RULES (Admin Only) -->
+  <div class="modal-backdrop" id="modalBranchRules">
+    <div class="modal-box modal-lg">
+      <div class="modal-header">
+        <h3><i class="fa-solid fa-sliders modal-icon-cyan"></i> Branch Code Mapping Matrix</h3>
+        <button class="btn btn-secondary btn-icon" onclick="App.closeModal('modalBranchRules')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p class="text-muted modal-desc">Configure roll number branch codes (e.g. <code>44</code> &rarr; <code>Data Science (DS)</code>, <code>61</code> &rarr; <code>AIML</code>, <code>43</code> &rarr; <code>CAI</code>).</p>
+
+        <!-- Add Branch Rule Form -->
+        <form id="formAddBranchRule" onsubmit="App.submitAddBranchRule(event)" class="account-form">
+          <div class="account-form-row">
+            <div class="form-group form-group-flush">
+              <label for="newRuleCode">Branch Code (e.g. 44, 61, 77) *</label>
+              <input type="text" id="newRuleCode" class="input-styled" placeholder="e.g. 77" required>
+            </div>
+            <div class="form-group form-group-flush">
+              <label for="newRuleName">Full Branch Department Name *</label>
+              <input type="text" id="newRuleName" class="input-styled" placeholder="e.g. Robotics & Automation" required>
+            </div>
+          </div>
+          <div class="text-right margin-top-sm">
+            <button type="submit" class="btn btn-primary btn-sm"><i class="fa-solid fa-plus"></i> Save Branch Rule</button>
+          </div>
+        </form>
+
+        <!-- Rules Table -->
+        <div class="table-container max-h-300">
+          <table class="custom-table" id="branchRulesTable">
+            <thead>
+              <tr>
+                <th class="col-w-80">Code</th>
+                <th>Mapped Branch Name</th>
+                <th class="text-right">Action</th>
+              </tr>
+            </thead>
+            <tbody id="branchRulesTableBody">
+              <!-- Populated by JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="App.closeModal('modalBranchRules')">Close</button>
       </div>
     </div>
   </div>

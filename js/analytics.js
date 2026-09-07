@@ -147,11 +147,26 @@ const AttendanceManager = (() => {
   }
 
   /**
-   * Delete attendance record
+   * Delete attendance record by ID
    */
   function deleteRecord(recordId) {
     logs = logs.filter(r => r.id !== recordId);
     saveLogs();
+  }
+
+  /**
+   * Remove attendance for a specific student today
+   */
+  function removeAttendanceForStudent(rollNo, sessionName) {
+    const today = getTodayDateStr();
+    const cleanRoll = rollNo.trim().toUpperCase();
+    const initialLen = logs.length;
+    logs = logs.filter(r => !(r.rollNo.toUpperCase() === cleanRoll && r.date === today && (sessionName ? r.session === sessionName : true)));
+    if (logs.length !== initialLen) {
+      saveLogs();
+      return true;
+    }
+    return false;
   }
 
   /**
@@ -364,6 +379,7 @@ const AttendanceManager = (() => {
     isAlreadyMarked,
     recordAttendance,
     deleteRecord,
+    removeAttendanceForStudent,
     clearAllLogs,
     getMetrics,
     exportCSV,

@@ -310,16 +310,19 @@ const App = (() => {
     if (yearFilter) yearFilter.addEventListener('change', triggerFilter);
   }
 
-  function renderRosterTable(query = '', branch = 'ALL', year = 'ALL') {
+  function renderRosterTable(query = null, branch = null, year = null) {
     const tbody = document.getElementById('rosterTableBody');
     if (!tbody) return;
 
+    const q = (query !== null ? query : (document.getElementById('rosterSearch')?.value || '')).toLowerCase().trim();
+    const b = branch !== null ? branch : (document.getElementById('rosterFilterBranch')?.value || 'ALL');
+    const y = year !== null ? year : (document.getElementById('rosterFilterYear')?.value || 'ALL');
+
     let students = RosterManager.getAllStudents();
-    const q = query.toLowerCase().trim();
 
     students = students.filter(s => {
-      if (branch !== 'ALL' && s.branch !== branch && !s.branch.includes(branch) && !branch.includes(s.branch)) return false;
-      if (year !== 'ALL' && s.year !== year && !s.year.includes(year) && !year.includes(s.year)) return false;
+      if (b !== 'ALL' && s.branch !== b && !s.branch.includes(b) && !b.includes(s.branch)) return false;
+      if (y !== 'ALL' && s.year !== y && !s.year.includes(y) && !y.includes(s.year)) return false;
       if (q && !s.rollNo.toLowerCase().includes(q) && !s.name.toLowerCase().includes(q)) return false;
       return true;
     });
@@ -328,7 +331,7 @@ const App = (() => {
       tbody.innerHTML = `
         <tr>
           <td colspan="7" class="empty-placeholder">
-            No student records found. Import Google Form responses or add students above.
+            No student records found matching the criteria. Import Google Form responses or add students above.
           </td>
         </tr>
       `;
@@ -337,6 +340,7 @@ const App = (() => {
 
     const today = AttendanceManager.getTodayDateStr();
     const activeSession = document.getElementById('activeSessionSelect')?.value || 'Morning Lecture';
+    const isAdmin = AuthManager.isAdmin();
 
     tbody.innerHTML = students.map((s, idx) => {
       const isPresent = AttendanceManager.isAlreadyMarked(s.rollNo, activeSession);
@@ -353,12 +357,29 @@ const App = (() => {
               : `<span class="tag tag-absent"><i class="fa-solid fa-xmark"></i> Absent</span>`}
           </td>
           <td class="text-right">
-            <button class="btn btn-secondary btn-sm" onclick="App.simulateScan('${s.rollNo}')" title="Test Scan">
-              <i class="fa-solid fa-barcode"></i>
-            </button>
-            <button class="btn btn-danger btn-sm" onclick="App.deleteStudent('${s.rollNo}')" title="Delete Student">
-              <i class="fa-solid fa-trash"></i>
-            </button>
+            <div class="row-action-btns">
+              ${isAdmin ? `
+                ${isPresent 
+                  ? `<button class="btn btn-secondary btn-sm" onclick="App.toggleStudentAttendance('${s.rollNo}')" title="Mark Absent for this session">
+                      <i class="fa-solid fa-user-xmark"></i>
+                    </button>` 
+                  : `<button class="btn btn-primary btn-sm" onclick="App.toggleStudentAttendance('${s.rollNo}')" title="Mark Present immediately">
+                      <i class="fa-solid fa-user-check"></i>
+                    </button>`
+                }
+              ` : ''}
+              <button class="btn btn-secondary btn-sm" onclick="App.simulateScan('${s.rollNo}')" title="Test QR Scan">
+                <i class="fa-solid fa-barcode"></i>
+              </button>
+              ${isAdmin ? `
+                <button class="btn btn-secondary btn-sm" onclick="App.openEditStudentModal('${s.rollNo}')" title="Edit Student Profile">
+                  <i class="fa-solid fa-pen-to-square"></i>
+                </button>
+                <button class="btn btn-danger btn-sm" onclick="App.deleteStudent('${s.rollNo}')" title="Delete Student">
+                  <i class="fa-solid fa-trash"></i>
+                </button>
+              ` : ''}
+            </div>
           </td>
         </tr>
       `;
@@ -515,6 +536,148 @@ const App = (() => {
     }
   }
 
+  function openEditStudentModal(rollNo) {
+    const student = RosterManager.findStudent(rollNo);
+    if (!student) {
+      showToast('Student not found.', 'error');
+      return;
+    }
+    const rollInput = document.getElementById('editStudentRoll');
+    const nameInput = document.getElementById('editStudentName');
+    const branchInput = document.getElementById('editStudentBranch');
+    const yearInput = document.getElementById('editStudentYear');
+
+    if (rollInput) rollInput.value = student.rollNo;
+    if (nameInput) nameInput.value = student.name;
+    if (branchInput) branchInput.value = student.branch;
+    if (yearInput) yearInput.value = student.year;
+
+    openModal('modalEditStudent');
+  }
+
+  function submitEditStudent(e) {
+    if (e) e.preventDefault();
+    const rollNo = document.getElementById('editStudentRoll')?.value;
+    const name = document.getElementById('editStudentName')?.value;
+    const branch = document.getElementById('editStudentBranch')?.value;
+    const year = document.getElementById('editStudentYear')?.value;
+
+    try {
+      RosterManager.updateStudent(rollNo, { name, branch, year });
+      closeModal('modalEditStudent');
+      showToast(`Student ${rollNo} updated successfully!`, 'success');
+      refreshAllViews();
+    } catch (err) {
+      showToast(err.message, 'error');
+    }
+  }
+
+  function toggleStudentAttendance(rollNo) {
+    const activeSession = document.getElementById('activeSessionSelect')?.value || 'Morning Lecture';
+    if (AttendanceManager.isAlreadyMarked(rollNo, activeSession)) {
+      AttendanceManager.removeAttendanceForStudent(rollNo, activeSession);
+      showToast(`Marked Absent: ${rollNo}`, 'info');
+    } else {
+      const student = RosterManager.findStudent(rollNo);
+      if (student) {
+        AttendanceManager.recordAttendance(student, activeSession);
+        showToast(`Marked Present: ${student.name}`, 'success');
+      }
+    }
+    refreshAllViews();
+  }
+
+  function exportRosterCSV() {
+    try {
+      RosterManager.exportCSV();
+      showToast('Student whitelist exported as CSV!', 'success');
+    } catch (err) {
+      showToast(err.message, 'warning');
+    }
+  }
+
+  function clearAllStudents() {
+    if (confirm('Are you sure you want to CLEAR the entire student whitelist? This cannot be undone.')) {
+      RosterManager.clearAll();
+      showToast('Student whitelist cleared', 'info');
+      refreshAllViews();
+    }
+  }
+
+  function handleGoogleFormFileUpload(file) {
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const text = e.target.result;
+      const textarea = document.getElementById('gformCsvInput');
+      if (textarea) {
+        textarea.value = text;
+        showToast(`Loaded ${file.name} (${text.split(/\r\n|\n|\r/).length} lines). Click "Process Import" to finish!`, 'info');
+      }
+    };
+    reader.readAsText(file);
+  }
+
+  function openBranchRulesModal() {
+    renderBranchRulesTable();
+    openModal('modalBranchRules');
+  }
+
+  function renderBranchRulesTable() {
+    const tbody = document.getElementById('branchRulesTableBody');
+    if (!tbody) return;
+    const rules = RosterManager.getBranchRules();
+    const entries = Object.entries(rules);
+    if (entries.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="3" class="empty-placeholder">No branch rules defined.</td></tr>';
+      return;
+    }
+    tbody.innerHTML = entries.map(([code, name]) => `
+      <tr>
+        <td class="font-mono font-semibold text-cyan">${escapeHtml(code)}</td>
+        <td><strong>${escapeHtml(name)}</strong></td>
+        <td class="text-right">
+          <button class="btn btn-danger btn-sm" onclick="App.deleteBranchRuleEntry('${escapeHtml(code)}')">
+            <i class="fa-solid fa-trash"></i>
+          </button>
+        </td>
+      </tr>
+    `).join('');
+  }
+
+  function submitAddBranchRule(e) {
+    if (e) e.preventDefault();
+    const code = document.getElementById('newRuleCode')?.value;
+    const name = document.getElementById('newRuleName')?.value;
+    try {
+      RosterManager.setBranchRule(code, name);
+      document.getElementById('formAddBranchRule')?.reset();
+      renderBranchRulesTable();
+      showToast(`Branch rule ${code} -> ${name} saved!`, 'success');
+      refreshAllViews();
+    } catch (err) {
+      showToast(err.message, 'error');
+    }
+  }
+
+  function deleteBranchRuleEntry(code) {
+    if (confirm(`Delete branch mapping for code "${code}"?`)) {
+      RosterManager.deleteBranchRule(code);
+      renderBranchRulesTable();
+      showToast(`Deleted rule "${code}"`, 'info');
+      refreshAllViews();
+    }
+  }
+
+  function clearAnalyticsDateFilter() {
+    const dateInput = document.getElementById('analyticsFilterDate');
+    if (dateInput) {
+      dateInput.value = '';
+      renderAttendanceTable();
+      showToast('Showing records for all dates', 'info');
+    }
+  }
+
   function deleteStudent(rollNo) {
     if (confirm(`Are you sure you want to remove Roll Number ${rollNo} from the Admin whitelist?`)) {
       RosterManager.deleteStudent(rollNo);
@@ -543,8 +706,20 @@ const App = (() => {
 
   function exportAttendanceCSV() {
     try {
-      AttendanceManager.exportCSV();
-      showToast('Attendance report downloaded as CSV!', 'success');
+      const query = document.getElementById('analyticsSearch')?.value || '';
+      const branch = document.getElementById('analyticsFilterBranch')?.value || 'ALL';
+      const year = document.getElementById('analyticsFilterYear')?.value || 'ALL';
+      const date = document.getElementById('analyticsFilterDate')?.value || '';
+
+      const records = AttendanceManager.getFilteredLogs({
+        query,
+        branch,
+        year,
+        date: date || null
+      });
+
+      AttendanceManager.exportCSV(records);
+      showToast(`Exported ${records.length} attendance records as CSV!`, 'success');
     } catch (e) {
       showToast(e.message, 'warning');
     }
@@ -667,6 +842,16 @@ const App = (() => {
     openModal,
     closeModal,
     submitAddStudent,
+    openEditStudentModal,
+    submitEditStudent,
+    toggleStudentAttendance,
+    exportRosterCSV,
+    clearAllStudents,
+    handleGoogleFormFileUpload,
+    openBranchRulesModal,
+    submitAddBranchRule,
+    deleteBranchRuleEntry,
+    clearAnalyticsDateFilter,
     submitImportGoogleForm,
     loadSampleGoogleFormTemplate,
     deleteStudent,

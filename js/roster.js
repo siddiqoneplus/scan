@@ -382,6 +382,61 @@ const RosterManager = (() => {
     return [];
   }
 
+  /**
+   * Export registered student whitelist as CSV
+   */
+  function exportCSV() {
+    if (students.length === 0) {
+      throw new Error('No students in whitelist to export.');
+    }
+    const today = (typeof AttendanceManager !== 'undefined') ? AttendanceManager.getTodayDateStr() : '';
+    const activeSession = document.getElementById('activeSessionSelect')?.value || 'Morning Lecture';
+
+    const headers = ['Roll Number', 'Student Name', 'Branch', 'Academic Year', 'Today Status'];
+    const rows = students.map(s => {
+      const isPresent = (typeof AttendanceManager !== 'undefined') ? AttendanceManager.isAlreadyMarked(s.rollNo, activeSession) : false;
+      return [
+        `"${s.rollNo}"`,
+        `"${s.name.replace(/"/g, '""')}"`,
+        `"${s.branch.replace(/"/g, '""')}"`,
+        `"${s.year.replace(/"/g, '""')}"`,
+        `"${isPresent ? 'Present' : 'Absent'}"`
+      ];
+    });
+
+    const csvContent = '\uFEFF' + [headers.join(','), ...rows.map(e => e.join(','))].join('\r\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', `Student_Whitelist_${today || 'export'}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  }
+
+  function getBranchRules() {
+    return { ...branchCodes };
+  }
+
+  function setBranchRule(code, branchName) {
+    if (!code || !branchName) throw new Error('Code and Branch Name are required.');
+    const cleanCode = code.trim().toUpperCase();
+    branchCodes[cleanCode] = branchName.trim();
+    localStorage.setItem(RULES_KEY, JSON.stringify(branchCodes));
+    window.dispatchEvent(new CustomEvent('roster:updated', { detail: { count: students.length } }));
+    return branchCodes;
+  }
+
+  function deleteBranchRule(code) {
+    const cleanCode = code.trim().toUpperCase();
+    delete branchCodes[cleanCode];
+    localStorage.setItem(RULES_KEY, JSON.stringify(branchCodes));
+    window.dispatchEvent(new CustomEvent('roster:updated', { detail: { count: students.length } }));
+    return branchCodes;
+  }
+
   return {
     init,
     getAllStudents: () => [...students],
@@ -393,6 +448,10 @@ const RosterManager = (() => {
     autoClassifyRollNumber,
     importGoogleFormCSV,
     resetToDefault,
-    clearAll
+    clearAll,
+    exportCSV,
+    getBranchRules,
+    setBranchRule,
+    deleteBranchRule
   };
 })();

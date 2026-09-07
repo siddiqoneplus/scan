@@ -99,16 +99,70 @@ const QRStudio = (() => {
 
   function downloadQR(rollNo, studentName) {
     const cleanRoll = rollNo.replace(/[^a-zA-Z0-9]/g, '');
+    const filename = `QR_${cleanRoll}_${studentName.replace(/\s+/g, '_')}.png`;
+
+    // Try finding the existing rendered canvas inside the ID card
+    const existingBoxes = document.querySelectorAll(`[id*="${cleanRoll}"] canvas`);
+    if (existingBoxes.length > 0 && existingBoxes[0].toDataURL) {
+      try {
+        const dataUrl = existingBoxes[0].toDataURL('image/png');
+        const a = document.createElement('a');
+        a.href = dataUrl;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        App.showToast(`Downloaded QR for ${rollNo}`, 'success');
+        return;
+      } catch (e) {
+        console.warn('Canvas export error, falling back', e);
+      }
+    }
+
+    // Secondary fallback: generate using QRCode library on offscreen element
+    try {
+      const tempDiv = document.createElement('div');
+      tempDiv.style.display = 'none';
+      document.body.appendChild(tempDiv);
+      new QRCode(tempDiv, {
+        text: rollNo,
+        width: 300,
+        height: 300,
+        correctLevel: QRCode.CorrectLevel.H
+      });
+
+      setTimeout(() => {
+        const canvas = tempDiv.querySelector('canvas');
+        if (canvas && canvas.toDataURL) {
+          const a = document.createElement('a');
+          a.href = canvas.toDataURL('image/png');
+          a.download = filename;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          tempDiv.remove();
+          App.showToast(`Downloaded QR for ${rollNo}`, 'success');
+        } else {
+          tempDiv.remove();
+          // Tertiary fallback: remote API
+          fetchDirectQr(rollNo, studentName, cleanRoll, filename);
+        }
+      }, 50);
+      return;
+    } catch (e) {
+      fetchDirectQr(rollNo, studentName, cleanRoll, filename);
+    }
+  }
+
+  function fetchDirectQr(rollNo, studentName, cleanRoll, filename) {
     const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=${encodeURIComponent(rollNo)}&margin=15`;
-    
-    // Fetch image as blob to trigger direct download
     fetch(qrUrl)
       .then(res => res.blob())
       .then(blob => {
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `QR_${cleanRoll}_${studentName.replace(/\s+/g, '_')}.png`;
+        a.download = filename;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
@@ -116,7 +170,6 @@ const QRStudio = (() => {
         App.showToast(`Downloaded QR for ${rollNo}`, 'success');
       })
       .catch(() => {
-        // Fallback: open image in new tab
         window.open(qrUrl, '_blank');
       });
   }
