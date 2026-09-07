@@ -23,8 +23,8 @@ const QRStudio = (() => {
 
     if (students.length === 0) {
       container.innerHTML = `
-        <div style="grid-column: 1/-1; text-align: center; padding: 3rem; color: var(--text-muted);">
-          <i class="fa-solid fa-id-card-clip" style="font-size: 2.5rem; margin-bottom: 1rem; opacity: 0.4;"></i>
+        <div class="empty-placeholder cards-empty">
+          <i class="fa-solid fa-id-card-clip"></i>
           <p>No student records found matching the current filters.</p>
         </div>
       `;
@@ -93,8 +93,7 @@ const QRStudio = (() => {
     const img = document.createElement('img');
     img.src = `https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=${encodeURIComponent(text)}&margin=10`;
     img.alt = `QR Code for ${text}`;
-    img.style.width = '140px';
-    img.style.height = '140px';
+    img.className = 'qr-code-img';
     el.appendChild(img);
   }
 

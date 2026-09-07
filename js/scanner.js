@@ -282,7 +282,7 @@ const ScannerEngine = (() => {
           <div class="student-info">
             <h4>Unregistered Student</h4>
             <div class="roll-no">${escapeHtml(rollNo)}</div>
-            <div class="form-hint" style="color: #f87171; margin-top: 0.25rem;">
+            <div class="form-hint unregistered-hint">
               Admin must import or assign this roll number in Google Form / Roster tab.
             </div>
           </div>
@@ -295,7 +295,7 @@ const ScannerEngine = (() => {
         <i class="fa-solid ${iconClass}"></i>
         <span>${title}</span>
       </div>
-      <p style="font-size: 0.825rem; color: var(--text-muted); margin-bottom: 0.5rem;">${escapeHtml(message)}</p>
+      <p class="result-desc">${escapeHtml(message)}</p>
       ${studentDetailsHtml}
     `;
 
@@ -306,13 +306,10 @@ const ScannerEngine = (() => {
     const pill = document.getElementById('scanStatusPill');
     if (!pill) return;
 
-    let dotColor = 'var(--text-muted)';
-    if (state === 'success') dotColor = 'var(--emerald)';
-    if (state === 'warning') dotColor = 'var(--amber)';
-    if (state === 'error') dotColor = 'var(--crimson)';
+    const stateClass = state ? ` ${state}` : '';
 
     pill.innerHTML = `
-      <span class="status-dot" style="background: ${dotColor}; box-shadow: 0 0 8px ${dotColor};"></span>
+      <span class="status-dot${stateClass}"></span>
       <span>${escapeHtml(text)}</span>
     `;
   }

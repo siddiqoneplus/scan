@@ -61,7 +61,7 @@
     <div class="header-actions">
       <div class="session-indicator" title="Active Academic Session">
         <span class="status-dot"></span>
-        <select id="activeSessionSelect" class="select-styled" style="padding: 0.2rem 0.5rem; font-size: 0.78rem; border: none; background: transparent;" onchange="App.refreshAllViews()">
+        <select id="activeSessionSelect" class="session-select" title="Select Active Lecture Session" aria-label="Select Active Lecture Session" onchange="App.refreshAllViews()">
           <option value="Morning Lecture">Morning Lecture (09:00 - 10:30)</option>
           <option value="Afternoon Lab">Afternoon Lab (11:00 - 01:00)</option>
           <option value="Practical Session">Practical Session (02:00 - 04:00)</option>
@@ -132,12 +132,12 @@
         <div class="scanner-station-card">
           <div class="station-header">
             <div class="station-title">
-              <div class="brand-icon" style="width: 36px; height: 36px; font-size: 1rem;">
+              <div class="brand-icon station-brand-icon">
                 <i class="fa-solid fa-qrcode"></i>
               </div>
               <div>
                 <h2>QR Attendance Scanner</h2>
-                <p style="font-size: 0.78rem; color: var(--text-muted);">Points camera to student QR code to mark instant attendance</p>
+                <p class="station-subtitle">Points camera to student QR code to mark instant attendance</p>
               </div>
             </div>
 
@@ -172,13 +172,13 @@
               <label class="file-input-label" title="Scan QR from an image file or photo">
                 <i class="fa-solid fa-image"></i>
                 <span>Upload QR Image</span>
-                <input type="file" id="qrFileInput" accept="image/*" style="display: none;" onchange="ScannerEngine.scanFromFile(this.files[0])">
+                <input type="file" id="qrFileInput" accept="image/*" class="hidden-file-input" title="Upload QR image file" onchange="ScannerEngine.scanFromFile(this.files[0])">
               </label>
             </div>
 
             <!-- Manual Roll Number Entry Fallback -->
             <form class="manual-entry-form" onsubmit="App.handleManualSubmit(event)">
-              <input type="text" id="manualRollInput" class="input-styled" placeholder="Or enter Roll No (e.g. 21B91A0501)" style="min-width: 240px;">
+              <input type="text" id="manualRollInput" class="input-styled manual-roll-input" placeholder="Or enter Roll No (e.g. 21B91A0501)" title="Enter roll number manually">
               <button type="submit" class="btn btn-primary btn-sm">
                 <i class="fa-solid fa-arrow-right"></i> Verify
               </button>
@@ -206,11 +206,11 @@
 
           <!-- Live Scans Ticker -->
           <div class="scanner-feed-card">
-            <div style="display: flex; align-items: center; justify-content: space-between;">
-              <h3 style="font-size: 0.95rem; font-weight: 600; display: flex; align-items: center; gap: 0.5rem;">
-                <i class="fa-solid fa-bolt" style="color: var(--emerald);"></i> Live Stream Ticker
+            <div class="feed-header">
+              <h3 class="feed-title">
+                <i class="fa-solid fa-bolt"></i> Live Stream Ticker
               </h3>
-              <span style="font-size: 0.72rem; color: var(--text-subtle);">Today's Feed</span>
+              <span class="feed-sub">Today's Feed</span>
             </div>
             <div class="live-ticker-list" id="liveTicker">
               <!-- Populated by JavaScript -->
@@ -231,15 +231,15 @@
             <i class="fa-brands fa-google"></i>
           </div>
           <div>
-            <h3 style="font-size: 1.1rem; font-weight: 700; color: #fff;">Google Form Student Whitelist & Auto-Classifier</h3>
-            <p style="font-size: 0.825rem; color: var(--text-muted); margin-top: 0.2rem;">
+            <h3 class="gform-title">Google Form Student Whitelist & Auto-Classifier</h3>
+            <p class="gform-subtitle">
               Only roll numbers assigned by the Admin are allowed to mark attendance. The system automatically categorizes each student's 
               <strong>Branch</strong> & <strong>Academic Year</strong> from their roll number format.
             </p>
           </div>
         </div>
 
-        <div style="display: flex; gap: 0.75rem;">
+        <div class="gform-actions">
           <button class="btn btn-secondary btn-sm" onclick="App.openModal('modalGoogleForm')">
             <i class="fa-solid fa-file-csv"></i> Import Google Form CSV
           </button>
@@ -253,9 +253,9 @@
       <div class="admin-card">
         <div class="section-toolbar">
           <div class="search-filter-group">
-            <input type="text" id="rosterSearch" class="input-styled" placeholder="Search by Roll No or Student Name..." style="min-width: 260px;">
+            <input type="text" id="rosterSearch" class="input-styled roster-search-input" placeholder="Search by Roll No or Student Name..." title="Search student roster">
             
-            <select id="rosterFilterBranch" class="select-styled">
+            <select id="rosterFilterBranch" class="select-styled" title="Filter Roster by Branch" aria-label="Filter Roster by Branch">
               <option value="ALL">All Branches</option>
               <option value="Computer Science (CSE)">Computer Science (CSE)</option>
               <option value="Electronics (ECE)">Electronics (ECE)</option>
@@ -263,7 +263,7 @@
               <option value="AI & Data Science (AI&DS)">AI & Data Science (AI&DS)</option>
             </select>
 
-            <select id="rosterFilterYear" class="select-styled">
+            <select id="rosterFilterYear" class="select-styled" title="Filter Roster by Academic Year" aria-label="Filter Roster by Academic Year">
               <option value="ALL">All Academic Years</option>
               <option value="1st Year">1st Year</option>
               <option value="2nd Year">2nd Year</option>
@@ -272,7 +272,7 @@
             </select>
           </div>
 
-          <div style="display: flex; gap: 0.5rem;">
+          <div class="flex-btn-group">
             <button class="btn btn-secondary btn-sm" onclick="App.resetRosterToDefault()" title="Reload university demo students">
               <i class="fa-solid fa-rotate-left"></i> Reset Demo Data
             </button>
@@ -284,13 +284,13 @@
           <table class="custom-table" id="rosterTable">
             <thead>
               <tr>
-                <th style="width: 50px;">#</th>
+                <th class="col-w-50">#</th>
                 <th>Roll Number</th>
                 <th>Student Name</th>
                 <th>Assigned Branch</th>
                 <th>Academic Year</th>
                 <th>Today's Status</th>
-                <th style="text-align: right;">Action</th>
+                <th class="text-right">Action</th>
               </tr>
             </thead>
             <tbody id="rosterTableBody">
@@ -306,12 +306,12 @@
       <div class="admin-card">
         <div class="section-toolbar">
           <div>
-            <h2 style="font-size: 1.2rem; font-weight: 700;">Student QR ID Badge Studio</h2>
-            <p style="font-size: 0.8rem; color: var(--text-muted);">Printable student ID cards with high-definition QR codes ready for camera scanning</p>
+            <h2 class="studio-title">Student QR ID Badge Studio</h2>
+            <p class="studio-subtitle">Printable student ID cards with high-definition QR codes ready for camera scanning</p>
           </div>
 
           <div class="search-filter-group">
-            <select id="cardFilterBranch" class="select-styled" onchange="QRStudio.setFilters(this.value, undefined)">
+            <select id="cardFilterBranch" class="select-styled" title="Filter ID Cards by Branch" aria-label="Filter ID Cards by Branch" onchange="QRStudio.setFilters(this.value, undefined)">
               <option value="ALL">All Branches</option>
               <option value="Computer Science (CSE)">Computer Science (CSE)</option>
               <option value="Electronics (ECE)">Electronics (ECE)</option>
@@ -319,7 +319,7 @@
               <option value="AI & Data Science (AI&DS)">AI & Data Science (AI&DS)</option>
             </select>
 
-            <select id="cardFilterYear" class="select-styled" onchange="QRStudio.setFilters(undefined, this.value)">
+            <select id="cardFilterYear" class="select-styled" title="Filter ID Cards by Academic Year" aria-label="Filter ID Cards by Academic Year" onchange="QRStudio.setFilters(undefined, this.value)">
               <option value="ALL">All Years</option>
               <option value="1st Year">1st Year</option>
               <option value="2nd Year">2nd Year</option>
@@ -364,11 +364,11 @@
       <div class="admin-card">
         <div class="section-toolbar">
           <div class="search-filter-group">
-            <input type="date" id="analyticsFilterDate" class="input-styled" style="cursor: pointer;">
+            <input type="date" id="analyticsFilterDate" class="input-styled analytics-date-picker" title="Filter Attendance by Date" aria-label="Filter Attendance by Date" placeholder="YYYY-MM-DD">
             
-            <input type="text" id="analyticsSearch" class="input-styled" placeholder="Filter by roll number or name...">
+            <input type="text" id="analyticsSearch" class="input-styled" placeholder="Filter by roll number or name..." title="Filter by roll number or name">
 
-            <select id="analyticsFilterBranch" class="select-styled">
+            <select id="analyticsFilterBranch" class="select-styled" title="Filter Logs by Branch" aria-label="Filter Logs by Branch">
               <option value="ALL">All Branches</option>
               <option value="Computer Science (CSE)">Computer Science (CSE)</option>
               <option value="Electronics (ECE)">Electronics (ECE)</option>
@@ -376,7 +376,7 @@
               <option value="AI & Data Science (AI&DS)">AI & Data Science (AI&DS)</option>
             </select>
 
-            <select id="analyticsFilterYear" class="select-styled">
+            <select id="analyticsFilterYear" class="select-styled" title="Filter Logs by Academic Year" aria-label="Filter Logs by Academic Year">
               <option value="ALL">All Years</option>
               <option value="1st Year">1st Year</option>
               <option value="2nd Year">2nd Year</option>
@@ -385,7 +385,7 @@
             </select>
           </div>
 
-          <div style="display: flex; gap: 0.6rem;">
+          <div class="analytics-actions">
             <button class="btn btn-primary btn-sm" onclick="App.exportAttendanceCSV()">
               <i class="fa-solid fa-file-arrow-down"></i> Export to Excel / Sheets
             </button>
@@ -400,14 +400,14 @@
           <table class="custom-table" id="analyticsTable">
             <thead>
               <tr>
-                <th style="width: 50px;">#</th>
+                <th class="col-w-50">#</th>
                 <th>Roll Number</th>
                 <th>Student Name</th>
                 <th>Branch</th>
                 <th>Year</th>
                 <th>Check-in Time</th>
                 <th>Session</th>
-                <th style="text-align: right;">Action</th>
+                <th class="text-right">Action</th>
               </tr>
             </thead>
             <tbody id="attendanceTableBody">
@@ -424,7 +424,7 @@
   <div class="modal-backdrop" id="modalAddStudent">
     <div class="modal-box">
       <div class="modal-header">
-        <h3><i class="fa-solid fa-user-plus" style="color: var(--emerald);"></i> Register Student to Whitelist</h3>
+        <h3><i class="fa-solid fa-user-plus modal-icon-emerald"></i> Register Student to Whitelist</h3>
         <button class="btn btn-secondary btn-icon" onclick="App.closeModal('modalAddStudent')">&times;</button>
       </div>
       <form id="formAddStudent" onsubmit="App.submitAddStudent(event)">
@@ -432,7 +432,7 @@
           <div class="form-group">
             <label for="newStudentRoll">Roll Number / Student ID *</label>
             <input type="text" id="newStudentRoll" class="input-styled" placeholder="e.g. 21B91A0501 or 23-CSE-045" required>
-            <span class="form-hint" id="autoClassificationHint" style="display: none; color: var(--emerald); font-weight: 500; margin-top: 0.25rem;"></span>
+            <span class="form-hint classification-hint" id="autoClassificationHint"></span>
           </div>
 
           <div class="form-group">
@@ -462,17 +462,17 @@
   <div class="modal-backdrop" id="modalGoogleForm">
     <div class="modal-box">
       <div class="modal-header">
-        <h3><i class="fa-solid fa-file-import" style="color: #4285f4;"></i> Import Google Form Responses</h3>
+        <h3><i class="fa-solid fa-file-import modal-icon-gform"></i> Import Google Form Responses</h3>
         <button class="btn btn-secondary btn-icon" onclick="App.closeModal('modalGoogleForm')">&times;</button>
       </div>
       <div class="modal-body">
-        <p style="font-size: 0.85rem; color: var(--text-muted);">
+        <p class="text-muted">
           Export your Google Form responses as CSV or copy the spreadsheet rows, then paste them below. 
           The engine will automatically detect <strong>Roll Number</strong>, <strong>Name</strong>, and classify the <strong>Branch & Year</strong>.
         </p>
 
         <div class="form-group">
-          <div style="display: flex; justify-content: space-between; align-items: center;">
+          <div class="gform-label-row">
             <label for="gformCsvInput">Paste CSV Data or Tab-Delimited Content:</label>
             <button type="button" class="btn btn-secondary btn-sm" onclick="App.loadSampleGoogleFormTemplate()">
               <i class="fa-solid fa-wand-magic-sparkles"></i> Load Sample Google Form Data

@@ -130,8 +130,8 @@ const App = (() => {
     const logs = AttendanceManager.getAllLogs().slice(0, 15);
     if (logs.length === 0) {
       ticker.innerHTML = `
-        <div style="text-align: center; padding: 2rem 1rem; color: var(--text-subtle); font-size: 0.825rem;">
-          <i class="fa-solid fa-clock-rotate-left" style="font-size: 1.5rem; margin-bottom: 0.5rem; opacity: 0.5;"></i>
+        <div class="empty-placeholder">
+          <i class="fa-solid fa-clock-rotate-left"></i>
           <p>No scans recorded yet today.</p>
         </div>
       `;
@@ -251,7 +251,7 @@ const App = (() => {
     if (students.length === 0) {
       tbody.innerHTML = `
         <tr>
-          <td colspan="6" style="text-align: center; padding: 2.5rem; color: var(--text-muted);">
+          <td colspan="7" class="empty-placeholder">
             No student records found. Import Google Form responses or add students above.
           </td>
         </tr>
@@ -266,17 +266,17 @@ const App = (() => {
       const isPresent = AttendanceManager.isAlreadyMarked(s.rollNo, activeSession);
       return `
         <tr>
-          <td style="color: var(--text-subtle);">${idx + 1}</td>
-          <td class="font-mono" style="font-weight: 600; color: #fff;">${escapeHtml(s.rollNo)}</td>
+          <td class="text-subtle col-w-50">${idx + 1}</td>
+          <td class="font-mono font-semibold text-white">${escapeHtml(s.rollNo)}</td>
           <td><strong>${escapeHtml(s.name)}</strong></td>
           <td><span class="tag tag-branch">${escapeHtml(s.branch)}</span></td>
           <td><span class="tag tag-year">${escapeHtml(s.year)}</span></td>
           <td>
             ${isPresent 
-              ? `<span class="tag" style="background: rgba(16, 185, 129, 0.2); color: #6ee7b7;"><i class="fa-solid fa-check"></i> Present</span>` 
-              : `<span class="tag" style="background: rgba(239, 68, 68, 0.15); color: #f87171;"><i class="fa-solid fa-xmark"></i> Absent</span>`}
+              ? `<span class="tag tag-present"><i class="fa-solid fa-check"></i> Present</span>` 
+              : `<span class="tag tag-absent"><i class="fa-solid fa-xmark"></i> Absent</span>`}
           </td>
-          <td style="text-align: right;">
+          <td class="text-right">
             <button class="btn btn-secondary btn-sm" onclick="App.simulateScan('${s.rollNo}')" title="Test Scan">
               <i class="fa-solid fa-barcode"></i>
             </button>
@@ -328,7 +328,7 @@ const App = (() => {
     if (records.length === 0) {
       tbody.innerHTML = `
         <tr>
-          <td colspan="7" style="text-align: center; padding: 2.5rem; color: var(--text-muted);">
+          <td colspan="8" class="empty-placeholder">
             No attendance records match your filter criteria.
           </td>
         </tr>
@@ -338,14 +338,14 @@ const App = (() => {
 
     tbody.innerHTML = records.map((r, idx) => `
       <tr>
-        <td style="color: var(--text-subtle);">${idx + 1}</td>
-        <td class="font-mono" style="font-weight: 600; color: #fff;">${escapeHtml(r.rollNo)}</td>
+        <td class="text-subtle col-w-50">${idx + 1}</td>
+        <td class="font-mono font-semibold text-white">${escapeHtml(r.rollNo)}</td>
         <td><strong>${escapeHtml(r.name)}</strong></td>
         <td><span class="tag tag-branch">${escapeHtml(r.branch)}</span></td>
         <td><span class="tag tag-year">${escapeHtml(r.year)}</span></td>
-        <td class="font-mono" style="color: var(--cyan);">${escapeHtml(r.timestamp)}</td>
+        <td class="font-mono text-cyan">${escapeHtml(r.timestamp)}</td>
         <td><span class="tag tag-session">${escapeHtml(r.session)}</span></td>
-        <td style="text-align: right;">
+        <td class="text-right">
           <button class="btn btn-danger btn-sm" onclick="App.deleteRecord('${r.id}')" title="Delete record">
             <i class="fa-solid fa-trash"></i>
           </button>
