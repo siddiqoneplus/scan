@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login | SmartAttendance PRO</title>
+  <meta name="description" content="Secure login portal for SmartAttendance PRO — QR-based student attendance system with role-based access control.">
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+  <!-- Login Styles -->
+  <link rel="stylesheet" href="css/login.css">
+</head>
+<body>
+
+  <!-- Animated Background -->
+  <div class="login-bg">
+    <div class="login-orb login-orb--1"></div>
+    <div class="login-orb login-orb--2"></div>
+    <div class="login-orb login-orb--3"></div>
+  </div>
+
+  <!-- Login Card -->
+  <div class="login-wrapper">
+    <div class="login-card">
+
+      <!-- Brand Hero -->
+      <div class="login-hero">
+        <div class="login-logo">
+          <i class="fa-solid fa-qrcode"></i>
+        </div>
+        <h1>SmartAttendance <span class="login-pro-badge">PRO</span></h1>
+        <p>Sign in to access the attendance portal</p>
+      </div>
+
+      <!-- Role Selector Toggle -->
+      <div class="role-selector" id="roleSelector">
+        <div class="role-indicator" id="roleIndicator"></div>
+        <button type="button" class="role-btn role-admin active" id="roleBtnAdmin" onclick="selectRole('admin')">
+          <i class="fa-solid fa-shield-halved"></i>
+          <span>Admin</span>
+        </button>
+        <button type="button" class="role-btn role-employee" id="roleBtnEmployee" onclick="selectRole('employee')">
+          <i class="fa-solid fa-user-tie"></i>
+          <span>Employee</span>
+        </button>
+      </div>
+
+      <!-- Login Form -->
+      <form class="login-form" id="loginForm" onsubmit="handleLogin(event)">
+
+        <!-- Error Banner -->
+        <div class="login-error" id="loginError">
+          <i class="fa-solid fa-circle-exclamation"></i>
+          <span id="loginErrorText">Invalid credentials</span>
+        </div>
+
+        <!-- Username -->
+        <div class="login-field">
+          <label for="loginUsername">Username</label>
+          <div class="input-wrapper">
+            <i class="fa-solid fa-user input-icon"></i>
+            <input
+              type="text"
+              id="loginUsername"
+              placeholder="Enter your username"
+              autocomplete="username"
+              required
+              autofocus
+            >
+          </div>
+        </div>
+
+        <!-- Password -->
+        <div class="login-field">
+          <label for="loginPassword">Password</label>
+          <div class="input-wrapper">
+            <i class="fa-solid fa-lock input-icon"></i>
+            <input
+              type="password"
+              id="loginPassword"
+              placeholder="Enter your password"
+              autocomplete="current-password"
+              required
+            >
+            <button type="button" class="toggle-password" onclick="togglePasswordVisibility()" title="Show/Hide Password">
+              <i class="fa-solid fa-eye" id="togglePwdIcon"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- Options -->
+        <div class="login-options">
+          <label class="remember-me">
+            <input type="checkbox" id="rememberMe">
+            <span>Remember me</span>
+          </label>
+        </div>
+
+        <!-- Submit Button -->
+        <button type="submit" class="login-submit" id="loginSubmitBtn">
+          <span id="loginBtnText">Sign In as Admin</span>
+          <i class="fa-solid fa-arrow-right" id="loginBtnIcon"></i>
+          <div class="login-spinner" id="loginSpinner"></div>
+        </button>
+      </form>
+
+      <!-- Credential Hints -->
+      <div class="login-hints">
+        <p>Demo Credentials</p>
+        <div class="hint-credentials">
+          <div class="hint-item">
+            <span class="hint-role admin">Admin</span>
+            admin / admin123
+          </div>
+          <div class="hint-item">
+            <span class="hint-role employee">Employee</span>
+            employee / emp123
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <div class="login-footer">
+    SmartAttendance PRO &copy; 2026 &mdash; QR Scanner & Auto Branch-Year Mapping
+  </div>
+
+  <!-- Auth Manager -->
+  <script src="js/auth.js"></script>
+
+  <script>
+    // ========== LOGIN PAGE LOGIC ==========
+
+    let selectedRole = 'admin';
+
+    // On load: check if already logged in
+    document.addEventListener('DOMContentLoaded', () => {
+      AuthManager.init();
+
+      // If already logged in, redirect to main app
+      if (AuthManager.isLoggedIn()) {
+        window.location.href = 'index.html';
+        return;
+      }
+    });
+
+    function selectRole(role) {
+      selectedRole = role;
+      const indicator = document.getElementById('roleIndicator');
+      const adminBtn = document.getElementById('roleBtnAdmin');
+      const employeeBtn = document.getElementById('roleBtnEmployee');
+      const submitBtn = document.getElementById('loginSubmitBtn');
+      const btnText = document.getElementById('loginBtnText');
+
+      if (role === 'admin') {
+        indicator.classList.remove('employee');
+        adminBtn.classList.add('active');
+        employeeBtn.classList.remove('active');
+        submitBtn.classList.remove('employee-mode');
+        btnText.textContent = 'Sign In as Admin';
+      } else {
+        indicator.classList.add('employee');
+        employeeBtn.classList.add('active');
+        adminBtn.classList.remove('active');
+        submitBtn.classList.add('employee-mode');
+        btnText.textContent = 'Sign In as Employee';
+      }
+
+      // Clear any previous error
+      hideError();
+    }
+
+    function handleLogin(e) {
+      e.preventDefault();
+
+      const username = document.getElementById('loginUsername').value.trim();
+      const password = document.getElementById('loginPassword').value;
+      const rememberMe = document.getElementById('rememberMe').checked;
+
+      if (!username || !password) {
+        showError('Please enter both username and password.');
+        return;
+      }
+
+      // Show loading state
+      const spinner = document.getElementById('loginSpinner');
+      const btnIcon = document.getElementById('loginBtnIcon');
+      const btnText = document.getElementById('loginBtnText');
+      spinner.classList.add('visible');
+      btnIcon.style.display = 'none';
+      btnText.textContent = 'Signing in...';
+
+      // Simulate brief auth delay for UX polish
+      setTimeout(() => {
+        const result = AuthManager.login(username, password, rememberMe);
+
+        if (result.success) {
+          // Verify role matches selection
+          if (result.session.role !== selectedRole) {
+            AuthManager.logout();
+            spinner.classList.remove('visible');
+            btnIcon.style.display = '';
+            btnText.textContent = selectedRole === 'admin' ? 'Sign In as Admin' : 'Sign In as Employee';
+            showError(`This account is not an ${selectedRole}. Please select the correct role.`);
+            return;
+          }
+
+          // Success — redirect
+          btnText.textContent = 'Welcome!';
+          setTimeout(() => {
+            window.location.href = 'index.html';
+          }, 400);
+        } else {
+          spinner.classList.remove('visible');
+          btnIcon.style.display = '';
+          btnText.textContent = selectedRole === 'admin' ? 'Sign In as Admin' : 'Sign In as Employee';
+          showError(result.error);
+        }
+      }, 600);
+    }
+
+    function showError(message) {
+      const errorEl = document.getElementById('loginError');
+      const errorText = document.getElementById('loginErrorText');
+      errorText.textContent = message;
+      errorEl.classList.add('visible');
+    }
+
+    function hideError() {
+      document.getElementById('loginError').classList.remove('visible');
+    }
+
+    function togglePasswordVisibility() {
+      const input = document.getElementById('loginPassword');
+      const icon = document.getElementById('togglePwdIcon');
+
+      if (input.type === 'password') {
+        input.type = 'text';
+        icon.classList.remove('fa-eye');
+        icon.classList.add('fa-eye-slash');
+      } else {
+        input.type = 'password';
+        icon.classList.remove('fa-eye-slash');
+        icon.classList.add('fa-eye');
+      }
+    }
+  </script>
+
+</body>
+</html>

@@ -242,6 +242,7 @@ body {
   display: flex;
   align-items: center;
   gap: 0.85rem;
+  flex-shrink: 0;
 }
 
 .session-indicator {
@@ -1656,4 +1657,95 @@ body {
   .id-card-name { color: #000 !important; }
   .id-card-roll { color: #333 !important; }
   .tag { border: 1px solid #333 !important; color: #000 !important; background: #eee !important; }
+}
+
+/* ==========================================================================
+   USER INFO PILL & LOGOUT (Header)
+   ========================================================================== */
+
+.user-info-pill {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 14px 6px 8px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-full);
+  cursor: default;
+  transition: all var(--transition-fast);
+}
+
+.user-info-pill:hover {
+  background: var(--surface-hover);
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+.user-avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--emerald), var(--cyan));
+  color: var(--bg-primary);
+  font-size: 0.75rem;
+  flex-shrink: 0;
+}
+
+.user-details {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  line-height: 1.2;
+}
+
+.user-name {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-main);
+  white-space: nowrap;
+}
+
+.user-role-badge {
+  font-size: 0.6rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 1px 6px;
+  border-radius: var(--radius-full);
+  display: inline-block;
+  width: fit-content;
+}
+
+.user-role-badge.role-admin {
+  background: rgba(16, 185, 129, 0.15);
+  color: var(--emerald);
+}
+
+.user-role-badge.role-employee {
+  background: rgba(139, 92, 246, 0.15);
+  color: var(--purple);
+}
+
+#btnLogout {
+  color: var(--text-muted);
+  transition: all var(--transition-fast);
+}
+
+#btnLogout:hover {
+  color: var(--crimson);
+  background: rgba(239, 68, 68, 0.1);
+  border-color: rgba(239, 68, 68, 0.25);
+}
+
+.modal-icon-cyan {
+  color: var(--cyan);
+}
+
+/* Responsive adjustments for user pill */
+@media (max-width: 768px) {
+  .user-info-pill {
+    display: none;
+  }
 }

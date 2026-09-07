@@ -8,6 +8,15 @@ const App = (() => {
   let activeTab = 'scanner';
 
   function init() {
+    // Initialize auth
+    AuthManager.init();
+
+    // Auth guard: redirect to login if not authenticated
+    if (!AuthManager.isLoggedIn()) {
+      window.location.href = 'login.html';
+      return;
+    }
+
     // Initialize components
     RosterManager.init();
     AttendanceManager.init();
@@ -18,6 +27,10 @@ const App = (() => {
     bindAnalyticsUI();
     bindModals();
     bindSimulator();
+
+    // Apply role-based permissions
+    applyRolePermissions();
+    renderHeaderUserInfo();
 
     // Initial render
     refreshAllViews();
@@ -46,6 +59,66 @@ const App = (() => {
       renderAttendanceTable();
       AttendanceManager.renderCharts();
     });
+  }
+
+  /**
+   * Render user info in the header pill.
+   */
+  function renderHeaderUserInfo() {
+    const session = AuthManager.getSession();
+    if (!session) return;
+
+    const nameEl = document.getElementById('headerUserName');
+    const roleEl = document.getElementById('headerUserRole');
+    const avatarEl = document.getElementById('userAvatar');
+
+    if (nameEl) nameEl.textContent = session.displayName || session.username;
+    if (roleEl) {
+      roleEl.textContent = session.role === 'admin' ? 'Admin' : 'Employee';
+      roleEl.className = 'user-role-badge ' + (session.role === 'admin' ? 'role-admin' : 'role-employee');
+    }
+    if (avatarEl) {
+      avatarEl.innerHTML = session.role === 'admin'
+        ? '<i class="fa-solid fa-shield-halved"></i>'
+        : '<i class="fa-solid fa-user-tie"></i>';
+    }
+  }
+
+  /**
+   * Apply role-based visibility and access control.
+   */
+  function applyRolePermissions() {
+    const isAdmin = AuthManager.isAdmin();
+
+    // Admin-only tabs: Roster, QR Studio
+    const rosterTab = document.getElementById('tabBtnRoster');
+    const cardsTab = document.getElementById('tabBtnCards');
+    if (rosterTab) rosterTab.style.display = isAdmin ? '' : 'none';
+    if (cardsTab) cardsTab.style.display = isAdmin ? '' : 'none';
+
+    // Admin-only elements (manage accounts button, etc.)
+    document.querySelectorAll('.admin-only-el').forEach(el => {
+      el.style.display = isAdmin ? '' : 'none';
+    });
+
+    // Employee restrictions: hide simulator bar, destructive buttons
+    if (!isAdmin) {
+      // Hide simulator chips bar
+      const simBar = document.querySelector('.quick-simulator-bar');
+      if (simBar) simBar.style.display = 'none';
+
+      // Hide clear logs & delete buttons in analytics (applied later on render)
+    }
+  }
+
+  /**
+   * Handle user logout.
+   */
+  function handleLogout() {
+    if (confirm('Are you sure you want to sign out?')) {
+      AuthManager.logout();
+      window.location.href = 'login.html';
+    }
   }
 
   function bindNavigation() {
@@ -336,7 +409,9 @@ const App = (() => {
       return;
     }
 
-    tbody.innerHTML = records.map((r, idx) => `
+    tbody.innerHTML = records.map((r, idx) => {
+      const isAdmin = AuthManager.isAdmin();
+      return `
       <tr>
         <td class="text-subtle col-w-50">${idx + 1}</td>
         <td class="font-mono font-semibold text-white">${escapeHtml(r.rollNo)}</td>
@@ -346,12 +421,17 @@ const App = (() => {
         <td class="font-mono text-cyan">${escapeHtml(r.timestamp)}</td>
         <td><span class="tag tag-session">${escapeHtml(r.session)}</span></td>
         <td class="text-right">
-          <button class="btn btn-danger btn-sm" onclick="App.deleteRecord('${r.id}')" title="Delete record">
+          ${isAdmin ? `<button class="btn btn-danger btn-sm" onclick="App.deleteRecord('${r.id}')" title="Delete record">
             <i class="fa-solid fa-trash"></i>
-          </button>
+          </button>` : ''}
         </td>
       </tr>
-    `).join('');
+    `;
+    }).join('');
+
+    // Hide clear logs button for non-admins
+    const clearBtn = document.querySelector('[onclick="App.clearAttendanceLogs()"]');
+    if (clearBtn) clearBtn.style.display = AuthManager.isAdmin() ? '' : 'none';
   }
 
   function bindModals() {
@@ -369,6 +449,10 @@ const App = (() => {
     const modal = document.getElementById(modalId);
     if (modal) {
       modal.classList.add('active');
+      // Render accounts table if opening manage accounts modal
+      if (modalId === 'modalManageAccounts') {
+        renderAccountsTable();
+      }
     }
   }
 
@@ -510,6 +594,68 @@ const App = (() => {
     })[m]);
   }
 
+  /**
+   * Submit new account from the Manage Accounts modal.
+   */
+  function submitAddAccount(e) {
+    if (e) e.preventDefault();
+    const username = document.getElementById('newAccUsername')?.value;
+    const password = document.getElementById('newAccPassword')?.value;
+    const displayName = document.getElementById('newAccDisplayName')?.value;
+    const role = document.getElementById('newAccRole')?.value || 'employee';
+
+    try {
+      AuthManager.addAccount({ username, password, displayName, role });
+      showToast(`Account "${username}" created successfully!`, 'success');
+      document.getElementById('formAddAccount').reset();
+      renderAccountsTable();
+    } catch (err) {
+      showToast(err.message, 'error');
+    }
+  }
+
+  /**
+   * Delete an account from the Manage Accounts modal.
+   */
+  function deleteAccountEntry(username) {
+    if (confirm(`Delete account "${username}"? This cannot be undone.`)) {
+      try {
+        AuthManager.deleteAccount(username);
+        showToast(`Account "${username}" deleted.`, 'info');
+        renderAccountsTable();
+      } catch (err) {
+        showToast(err.message, 'error');
+      }
+    }
+  }
+
+  /**
+   * Render the accounts table inside the Manage Accounts modal.
+   */
+  function renderAccountsTable() {
+    const tbody = document.getElementById('accountsTableBody');
+    if (!tbody) return;
+
+    const accounts = AuthManager.listAccounts();
+    const currentUser = AuthManager.getSession()?.username;
+
+    tbody.innerHTML = accounts.map((a, idx) => `
+      <tr>
+        <td class="text-subtle col-w-50">${idx + 1}</td>
+        <td class="font-mono font-semibold text-white">${escapeHtml(a.username)}</td>
+        <td>${escapeHtml(a.displayName)}</td>
+        <td><span class="tag ${a.role === 'admin' ? 'tag-present' : 'tag-session'}">${a.role === 'admin' ? 'Admin' : 'Employee'}</span></td>
+        <td class="text-right">
+          ${a.username.toLowerCase() === currentUser?.toLowerCase()
+            ? '<span class="tag tag-year">You</span>'
+            : `<button class="btn btn-danger btn-sm" onclick="App.deleteAccountEntry('${a.username}')" title="Delete account">
+                <i class="fa-solid fa-trash"></i>
+              </button>`}
+        </td>
+      </tr>
+    `).join('');
+  }
+
   return {
     init,
     switchTab,
@@ -526,7 +672,11 @@ const App = (() => {
     clearAttendanceLogs,
     exportAttendanceCSV,
     showToast,
-    refreshAllViews
+    refreshAllViews,
+    handleLogout,
+    submitAddAccount,
+    deleteAccountEntry,
+    renderAccountsTable
   };
 })();
 
