@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Smart Attendance System | QR Scanner & Auto Branch-Year Mapping</title>
+  <meta name="description" content="Next-generation student attendance web application powered by QR scanning, Google Form integration, automatic branch and year classification, and real-time analytics.">
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+  <!-- App Stylesheet -->
+  <link rel="stylesheet" href="css/style.css">
+
+  <!-- Third-party Libraries -->
+  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+</head>
+<body>
+
+  <!-- Top Navigation Header -->
+  <header class="app-header">
+    <a href="#" class="brand" onclick="App.switchTab('scanner'); return false;">
+      <div class="brand-icon">
+        <i class="fa-solid fa-qrcode"></i>
+      </div>
+      <div class="brand-info">
+        <h1>SmartAttendance <span class="brand-badge">PRO</span></h1>
+        <p>QR Scanner & Google Form Auto-Classifier</p>
+      </div>
+    </a>
+
+    <!-- Nav Tabs -->
+    <nav class="nav-tabs" aria-label="Main Navigation">
+      <button class="nav-btn active" data-tab="scanner" id="tabBtnScanner">
+        <i class="fa-solid fa-camera"></i>
+        <span>Live Scanner</span>
+      </button>
+      <button class="nav-btn" data-tab="roster" id="tabBtnRoster">
+        <i class="fa-solid fa-users-viewfinder"></i>
+        <span>Admin & Google Form</span>
+      </button>
+      <button class="nav-btn" data-tab="cards" id="tabBtnCards">
+        <i class="fa-solid fa-id-card"></i>
+        <span>QR ID Studio</span>
+      </button>
+      <button class="nav-btn" data-tab="analytics" id="tabBtnAnalytics">
+        <i class="fa-solid fa-chart-pie"></i>
+        <span>Logs & Analytics</span>
+      </button>
+    </nav>
+
+    <!-- Session & Audio Header Controls -->
+    <div class="header-actions">
+      <div class="session-indicator" title="Active Academic Session">
+        <span class="status-dot"></span>
+        <select id="activeSessionSelect" class="select-styled" style="padding: 0.2rem 0.5rem; font-size: 0.78rem; border: none; background: transparent;" onchange="App.refreshAllViews()">
+          <option value="Morning Lecture">Morning Lecture (09:00 - 10:30)</option>
+          <option value="Afternoon Lab">Afternoon Lab (11:00 - 01:00)</option>
+          <option value="Practical Session">Practical Session (02:00 - 04:00)</option>
+          <option value="Semester Exam">Semester Exam</option>
+        </select>
+      </div>
+      <button id="btnToggleSound" class="btn btn-secondary btn-icon" onclick="ScannerEngine.toggleSound()" title="Toggle Sound">
+        <i class="fa-solid fa-volume-high"></i>
+      </button>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="main-content">
+
+    <!-- KPI Summary Cards (Global Top Bar) -->
+    <section class="kpi-grid" aria-label="Key Performance Indicators">
+      <div class="kpi-card">
+        <div class="kpi-info">
+          <h3>Registered Students</h3>
+          <div class="kpi-number" id="kpiTotalRegistered">0</div>
+          <div class="kpi-sub">Admin Whitelisted</div>
+        </div>
+        <div class="kpi-icon cyan">
+          <i class="fa-solid fa-user-graduate"></i>
+        </div>
+      </div>
+
+      <div class="kpi-card">
+        <div class="kpi-info">
+          <h3>Present Today</h3>
+          <div class="kpi-number" id="kpiTotalPresent">0</div>
+          <div class="kpi-sub">Unique check-ins</div>
+        </div>
+        <div class="kpi-icon emerald">
+          <i class="fa-solid fa-clipboard-check"></i>
+        </div>
+      </div>
+
+      <div class="kpi-card">
+        <div class="kpi-info">
+          <h3>Attendance Rate</h3>
+          <div class="kpi-number" id="kpiAttendanceRate">0%</div>
+          <div class="kpi-sub">Current session progress</div>
+        </div>
+        <div class="kpi-icon purple">
+          <i class="fa-solid fa-chart-line"></i>
+        </div>
+      </div>
+
+      <div class="kpi-card">
+        <div class="kpi-info">
+          <h3>Total Scans Logged</h3>
+          <div class="kpi-number" id="kpiTotalScans">0</div>
+          <div class="kpi-sub">Today's recorded ticks</div>
+        </div>
+        <div class="kpi-icon amber">
+          <i class="fa-solid fa-barcode"></i>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 1: LIVE SCANNER -->
+    <section id="section-scanner" class="tab-section active">
+      <div class="scanner-grid">
+        
+        <!-- Left: Camera Station Card -->
+        <div class="scanner-station-card">
+          <div class="station-header">
+            <div class="station-title">
+              <div class="brand-icon" style="width: 36px; height: 36px; font-size: 1rem;">
+                <i class="fa-solid fa-qrcode"></i>
+              </div>
+              <div>
+                <h2>QR Attendance Scanner</h2>
+                <p style="font-size: 0.78rem; color: var(--text-muted);">Points camera to student QR code to mark instant attendance</p>
+              </div>
+            </div>
+
+            <div class="station-controls">
+              <button id="btnToggleCamera" class="btn btn-secondary btn-sm" onclick="ScannerEngine.toggleCamera()">
+                <i class="fa-solid fa-camera"></i> Toggle Camera
+              </button>
+            </div>
+          </div>
+
+          <!-- Live Viewport & Reticle -->
+          <div class="scanner-viewport-wrapper">
+            <div id="reader"></div>
+
+            <div class="scan-overlay">
+              <div class="scan-frame">
+                <span class="frame-corner-tr"></span>
+                <span class="frame-corner-bl"></span>
+                <div class="scan-laser"></div>
+              </div>
+            </div>
+
+            <div class="scan-status-pill" id="scanStatusPill">
+              <span class="status-dot"></span>
+              <span>Camera initializing...</span>
+            </div>
+          </div>
+
+          <!-- Bottom Action Bar: Upload File or Manual Entry -->
+          <div class="scanner-bar-bottom">
+            <div class="mode-selectors">
+              <label class="file-input-label" title="Scan QR from an image file or photo">
+                <i class="fa-solid fa-image"></i>
+                <span>Upload QR Image</span>
+                <input type="file" id="qrFileInput" accept="image/*" style="display: none;" onchange="ScannerEngine.scanFromFile(this.files[0])">
+              </label>
+            </div>
+
+            <!-- Manual Roll Number Entry Fallback -->
+            <form class="manual-entry-form" onsubmit="App.handleManualSubmit(event)">
+              <input type="text" id="manualRollInput" class="input-styled" placeholder="Or enter Roll No (e.g. 21B91A0501)" style="min-width: 240px;">
+              <button type="submit" class="btn btn-primary btn-sm">
+                <i class="fa-solid fa-arrow-right"></i> Verify
+              </button>
+            </form>
+          </div>
+
+          <!-- Quick Test Simulator Bar -->
+          <div class="quick-simulator-bar">
+            <div class="sim-header">
+              <span><i class="fa-solid fa-flask-vial"></i> Fast Simulator (Click any student to test scan instantly):</span>
+            </div>
+            <div class="sim-chips" id="simulatorChips">
+              <!-- Rendered dynamically -->
+            </div>
+          </div>
+        </div>
+
+        <!-- Right: Live Result Banner & Feed -->
+        <aside class="scanner-side-panel">
+          
+          <!-- Scan Result Notification Card -->
+          <div id="scanResultBanner" class="result-banner">
+            <!-- Dynamically populated with student photo, name, branch, and status -->
+          </div>
+
+          <!-- Live Scans Ticker -->
+          <div class="scanner-feed-card">
+            <div style="display: flex; align-items: center; justify-content: space-between;">
+              <h3 style="font-size: 0.95rem; font-weight: 600; display: flex; align-items: center; gap: 0.5rem;">
+                <i class="fa-solid fa-bolt" style="color: var(--emerald);"></i> Live Stream Ticker
+              </h3>
+              <span style="font-size: 0.72rem; color: var(--text-subtle);">Today's Feed</span>
+            </div>
+            <div class="live-ticker-list" id="liveTicker">
+              <!-- Populated by JavaScript -->
+            </div>
+          </div>
+        </aside>
+
+      </div>
+    </section>
+
+    <!-- TAB 2: ADMIN & GOOGLE FORM SYNC -->
+    <section id="section-roster" class="tab-section">
+      
+      <!-- Google Form Integration Info Banner -->
+      <div class="google-form-banner">
+        <div class="gform-desc">
+          <div class="gform-icon">
+            <i class="fa-brands fa-google"></i>
+          </div>
+          <div>
+            <h3 style="font-size: 1.1rem; font-weight: 700; color: #fff;">Google Form Student Whitelist & Auto-Classifier</h3>
+            <p style="font-size: 0.825rem; color: var(--text-muted); margin-top: 0.2rem;">
+              Only roll numbers assigned by the Admin are allowed to mark attendance. The system automatically categorizes each student's 
+              <strong>Branch</strong> & <strong>Academic Year</strong> from their roll number format.
+            </p>
+          </div>
+        </div>
+
+        <div style="display: flex; gap: 0.75rem;">
+          <button class="btn btn-secondary btn-sm" onclick="App.openModal('modalGoogleForm')">
+            <i class="fa-solid fa-file-csv"></i> Import Google Form CSV
+          </button>
+          <button class="btn btn-primary btn-sm" onclick="App.openModal('modalAddStudent')">
+            <i class="fa-solid fa-user-plus"></i> Add Student Manually
+          </button>
+        </div>
+      </div>
+
+      <!-- Admin Roster Card -->
+      <div class="admin-card">
+        <div class="section-toolbar">
+          <div class="search-filter-group">
+            <input type="text" id="rosterSearch" class="input-styled" placeholder="Search by Roll No or Student Name..." style="min-width: 260px;">
+            
+            <select id="rosterFilterBranch" class="select-styled">
+              <option value="ALL">All Branches</option>
+              <option value="Computer Science (CSE)">Computer Science (CSE)</option>
+              <option value="Electronics (ECE)">Electronics (ECE)</option>
+              <option value="Mechanical (MECH)">Mechanical (MECH)</option>
+              <option value="AI & Data Science (AI&DS)">AI & Data Science (AI&DS)</option>
+            </select>
+
+            <select id="rosterFilterYear" class="select-styled">
+              <option value="ALL">All Academic Years</option>
+              <option value="1st Year">1st Year</option>
+              <option value="2nd Year">2nd Year</option>
+              <option value="3rd Year">3rd Year</option>
+              <option value="4th Year">4th Year</option>
+            </select>
+          </div>
+
+          <div style="display: flex; gap: 0.5rem;">
+            <button class="btn btn-secondary btn-sm" onclick="App.resetRosterToDefault()" title="Reload university demo students">
+              <i class="fa-solid fa-rotate-left"></i> Reset Demo Data
+            </button>
+          </div>
+        </div>
+
+        <!-- Student Whitelist Table -->
+        <div class="table-container">
+          <table class="custom-table" id="rosterTable">
+            <thead>
+              <tr>
+                <th style="width: 50px;">#</th>
+                <th>Roll Number</th>
+                <th>Student Name</th>
+                <th>Assigned Branch</th>
+                <th>Academic Year</th>
+                <th>Today's Status</th>
+                <th style="text-align: right;">Action</th>
+              </tr>
+            </thead>
+            <tbody id="rosterTableBody">
+              <!-- Rendered by JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 3: STUDENT QR ID BADGE STUDIO -->
+    <section id="section-cards" class="tab-section">
+      <div class="admin-card">
+        <div class="section-toolbar">
+          <div>
+            <h2 style="font-size: 1.2rem; font-weight: 700;">Student QR ID Badge Studio</h2>
+            <p style="font-size: 0.8rem; color: var(--text-muted);">Printable student ID cards with high-definition QR codes ready for camera scanning</p>
+          </div>
+
+          <div class="search-filter-group">
+            <select id="cardFilterBranch" class="select-styled" onchange="QRStudio.setFilters(this.value, undefined)">
+              <option value="ALL">All Branches</option>
+              <option value="Computer Science (CSE)">Computer Science (CSE)</option>
+              <option value="Electronics (ECE)">Electronics (ECE)</option>
+              <option value="Mechanical (MECH)">Mechanical (MECH)</option>
+              <option value="AI & Data Science (AI&DS)">AI & Data Science (AI&DS)</option>
+            </select>
+
+            <select id="cardFilterYear" class="select-styled" onchange="QRStudio.setFilters(undefined, this.value)">
+              <option value="ALL">All Years</option>
+              <option value="1st Year">1st Year</option>
+              <option value="2nd Year">2nd Year</option>
+              <option value="3rd Year">3rd Year</option>
+              <option value="4th Year">4th Year</option>
+            </select>
+
+            <button class="btn btn-primary btn-sm" onclick="QRStudio.printAllBadges()">
+              <i class="fa-solid fa-print"></i> Batch Print ID Badges
+            </button>
+          </div>
+        </div>
+
+        <!-- ID Cards Grid -->
+        <div class="cards-grid" id="cardsContainer">
+          <!-- Populated by JS -->
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 4: ATTENDANCE LOGS & ANALYTICS -->
+    <section id="section-analytics" class="tab-section">
+      
+      <!-- Charts Grid -->
+      <div class="charts-grid">
+        <div class="chart-card">
+          <h3><i class="fa-solid fa-chart-column"></i> Branch Attendance Distribution</h3>
+          <div class="chart-wrapper">
+            <canvas id="chartBranch"></canvas>
+          </div>
+        </div>
+
+        <div class="chart-card">
+          <h3><i class="fa-solid fa-chart-pie"></i> Year-wise Attendance Share</h3>
+          <div class="chart-wrapper">
+            <canvas id="chartYear"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- Records Table Card -->
+      <div class="admin-card">
+        <div class="section-toolbar">
+          <div class="search-filter-group">
+            <input type="date" id="analyticsFilterDate" class="input-styled" style="cursor: pointer;">
+            
+            <input type="text" id="analyticsSearch" class="input-styled" placeholder="Filter by roll number or name...">
+
+            <select id="analyticsFilterBranch" class="select-styled">
+              <option value="ALL">All Branches</option>
+              <option value="Computer Science (CSE)">Computer Science (CSE)</option>
+              <option value="Electronics (ECE)">Electronics (ECE)</option>
+              <option value="Mechanical (MECH)">Mechanical (MECH)</option>
+              <option value="AI & Data Science (AI&DS)">AI & Data Science (AI&DS)</option>
+            </select>
+
+            <select id="analyticsFilterYear" class="select-styled">
+              <option value="ALL">All Years</option>
+              <option value="1st Year">1st Year</option>
+              <option value="2nd Year">2nd Year</option>
+              <option value="3rd Year">3rd Year</option>
+              <option value="4th Year">4th Year</option>
+            </select>
+          </div>
+
+          <div style="display: flex; gap: 0.6rem;">
+            <button class="btn btn-primary btn-sm" onclick="App.exportAttendanceCSV()">
+              <i class="fa-solid fa-file-arrow-down"></i> Export to Excel / Sheets
+            </button>
+            <button class="btn btn-danger btn-sm" onclick="App.clearAttendanceLogs()">
+              <i class="fa-solid fa-trash-can"></i> Clear Logs
+            </button>
+          </div>
+        </div>
+
+        <!-- Attendance Records Table -->
+        <div class="table-container">
+          <table class="custom-table" id="analyticsTable">
+            <thead>
+              <tr>
+                <th style="width: 50px;">#</th>
+                <th>Roll Number</th>
+                <th>Student Name</th>
+                <th>Branch</th>
+                <th>Year</th>
+                <th>Check-in Time</th>
+                <th>Session</th>
+                <th style="text-align: right;">Action</th>
+              </tr>
+            </thead>
+            <tbody id="attendanceTableBody">
+              <!-- Rendered by JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- MODAL: ADD STUDENT MANUALLY -->
+  <div class="modal-backdrop" id="modalAddStudent">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3><i class="fa-solid fa-user-plus" style="color: var(--emerald);"></i> Register Student to Whitelist</h3>
+        <button class="btn btn-secondary btn-icon" onclick="App.closeModal('modalAddStudent')">&times;</button>
+      </div>
+      <form id="formAddStudent" onsubmit="App.submitAddStudent(event)">
+        <div class="modal-body">
+          <div class="form-group">
+            <label for="newStudentRoll">Roll Number / Student ID *</label>
+            <input type="text" id="newStudentRoll" class="input-styled" placeholder="e.g. 21B91A0501 or 23-CSE-045" required>
+            <span class="form-hint" id="autoClassificationHint" style="display: none; color: var(--emerald); font-weight: 500; margin-top: 0.25rem;"></span>
+          </div>
+
+          <div class="form-group">
+            <label for="newStudentName">Full Student Name *</label>
+            <input type="text" id="newStudentName" class="input-styled" placeholder="e.g. Aarav Sharma" required>
+          </div>
+
+          <div class="form-group">
+            <label for="newStudentBranch">Assigned Branch (Auto-detected or custom)</label>
+            <input type="text" id="newStudentBranch" class="input-styled" placeholder="e.g. Computer Science (CSE)">
+          </div>
+
+          <div class="form-group">
+            <label for="newStudentYear">Academic Year (Auto-detected or custom)</label>
+            <input type="text" id="newStudentYear" class="input-styled" placeholder="e.g. 4th Year">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" onclick="App.closeModal('modalAddStudent')">Cancel</button>
+          <button type="submit" class="btn btn-primary"><i class="fa-solid fa-check"></i> Save Student</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: IMPORT GOOGLE FORM RESPONSES -->
+  <div class="modal-backdrop" id="modalGoogleForm">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3><i class="fa-solid fa-file-import" style="color: #4285f4;"></i> Import Google Form Responses</h3>
+        <button class="btn btn-secondary btn-icon" onclick="App.closeModal('modalGoogleForm')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p style="font-size: 0.85rem; color: var(--text-muted);">
+          Export your Google Form responses as CSV or copy the spreadsheet rows, then paste them below. 
+          The engine will automatically detect <strong>Roll Number</strong>, <strong>Name</strong>, and classify the <strong>Branch & Year</strong>.
+        </p>
+
+        <div class="form-group">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <label for="gformCsvInput">Paste CSV Data or Tab-Delimited Content:</label>
+            <button type="button" class="btn btn-secondary btn-sm" onclick="App.loadSampleGoogleFormTemplate()">
+              <i class="fa-solid fa-wand-magic-sparkles"></i> Load Sample Google Form Data
+            </button>
+          </div>
+          <textarea id="gformCsvInput" class="textarea-styled" placeholder="Timestamp,Student Name,Roll Number,Branch,Academic Year&#10;2026/09/01 10:15 AM,Kunal Sen,22B91A0588,Computer Science,3rd Year..."></textarea>
+          <span class="form-hint">Tip: If Branch and Year columns are blank, they will be auto-derived from the student's Roll Number pattern!</span>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="App.closeModal('modalGoogleForm')">Cancel</button>
+        <button type="button" class="btn btn-primary" onclick="App.submitImportGoogleForm()">
+          <i class="fa-solid fa-upload"></i> Process Import
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div id="toastContainer" class="toast-container" aria-live="polite"></div>
+
+  <!-- Application Scripts -->
+  <script src="js/roster.js"></script>
+  <script src="js/analytics.js"></script>
+  <script src="js/qr-generator.js"></script>
+  <script src="js/scanner.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
