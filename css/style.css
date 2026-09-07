@@ -1749,3 +1749,42 @@ body {
     display: none;
   }
 }
+
+/* ==========================================================================
+   MANAGE ACCOUNTS MODAL LAYOUT
+   ========================================================================== */
+
+.admin-only-el {
+  /* Initial hidden state set by JS; this ensures no flash of content */
+}
+
+.modal-desc {
+  margin-bottom: 16px;
+}
+
+.account-form {
+  margin-bottom: 20px;
+}
+
+.account-form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.account-form-row-3 {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  gap: 12px;
+  align-items: end;
+}
+
+.form-group-flush {
+  margin-bottom: 0;
+}
+
+.btn-add-account {
+  height: 42px;
+}
+

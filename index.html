@@ -83,7 +83,7 @@
         </div>
       </div>
 
-      <button id="btnManageAccounts" class="btn btn-secondary btn-icon admin-only-el" onclick="App.openModal('modalManageAccounts')" title="Manage Accounts" style="display:none;">
+      <button id="btnManageAccounts" class="btn btn-secondary btn-icon admin-only-el" onclick="App.openModal('modalManageAccounts')" title="Manage Accounts">
         <i class="fa-solid fa-users-gear"></i>
       </button>
 
@@ -518,33 +518,33 @@
         <button class="btn btn-secondary btn-icon" onclick="App.closeModal('modalManageAccounts')">&times;</button>
       </div>
       <div class="modal-body">
-        <p class="text-muted" style="margin-bottom: 16px;">Create and manage employee login accounts. Admins have full access; Employees can only scan and view analytics.</p>
+        <p class="text-muted modal-desc">Create and manage employee login accounts. Admins have full access; Employees can only scan and view analytics.</p>
 
         <!-- Add Account Form -->
-        <form id="formAddAccount" onsubmit="App.submitAddAccount(event)" style="margin-bottom: 20px;">
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
-            <div class="form-group" style="margin-bottom:0">
+        <form id="formAddAccount" onsubmit="App.submitAddAccount(event)" class="account-form">
+          <div class="account-form-row">
+            <div class="form-group form-group-flush">
               <label for="newAccUsername">Username *</label>
               <input type="text" id="newAccUsername" class="input-styled" placeholder="e.g. john_doe" required>
             </div>
-            <div class="form-group" style="margin-bottom:0">
+            <div class="form-group form-group-flush">
               <label for="newAccPassword">Password *</label>
               <input type="text" id="newAccPassword" class="input-styled" placeholder="e.g. pass1234" required>
             </div>
           </div>
-          <div style="display: grid; grid-template-columns: 1fr 1fr auto; gap: 12px; align-items: end;">
-            <div class="form-group" style="margin-bottom:0">
+          <div class="account-form-row-3">
+            <div class="form-group form-group-flush">
               <label for="newAccDisplayName">Display Name</label>
               <input type="text" id="newAccDisplayName" class="input-styled" placeholder="e.g. John Doe">
             </div>
-            <div class="form-group" style="margin-bottom:0">
+            <div class="form-group form-group-flush">
               <label for="newAccRole">Role</label>
               <select id="newAccRole" class="select-styled">
                 <option value="employee">Employee</option>
                 <option value="admin">Admin</option>
               </select>
             </div>
-            <button type="submit" class="btn btn-primary btn-sm" style="height: 42px;"><i class="fa-solid fa-user-plus"></i> Add</button>
+            <button type="submit" class="btn btn-primary btn-sm btn-add-account"><i class="fa-solid fa-user-plus"></i> Add</button>
           </div>
         </form>
 

@@ -175,8 +175,8 @@ body {
 
 .login-card {
   background: var(--glass-bg);
-  backdrop-filter: var(--glass-blur);
   -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
   border: var(--glass-border);
   border-radius: var(--radius-xl);
   box-shadow: var(--shadow-lg), 0 0 60px rgba(16, 185, 129, 0.06);
@@ -233,8 +233,8 @@ body {
   letter-spacing: -0.02em;
   margin-bottom: 4px;
   background: linear-gradient(135deg, var(--text-main), var(--cyan));
-  background-clip: text;
   -webkit-background-clip: text;
+  background-clip: text;
   -webkit-text-fill-color: transparent;
 }
 
@@ -439,8 +439,8 @@ body {
 }
 
 .remember-me input[type="checkbox"] {
-  appearance: none;
   -webkit-appearance: none;
+  appearance: none;
   width: 18px;
   height: 18px;
   border: 2px solid var(--border);
