@@ -29,10 +29,10 @@ const AttendanceManager = (() => {
       logs = [
         {
           id: 'att-' + Date.now() + '-1',
-          rollNo: '21B91A0501',
+          rollNo: '24A81A4401',
           name: 'Aarav Sharma',
-          branch: 'Computer Science (CSE)',
-          year: '4th Year',
+          branch: 'Data Science (DS)',
+          year: '2024 Batch (1st Year)',
           session: 'Morning Lecture',
           date: today,
           timestamp: new Date(Date.now() - 3600000 * 2).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
@@ -40,10 +40,10 @@ const AttendanceManager = (() => {
         },
         {
           id: 'att-' + Date.now() + '-2',
-          rollNo: '22B91A0415',
-          name: 'Rohan Patel',
-          branch: 'Electronics (ECE)',
-          year: '3rd Year',
+          rollNo: '24A81A6101',
+          name: 'Charan Teja',
+          branch: 'AIML (AI & Machine Learning)',
+          year: '2024 Batch (1st Year)',
           session: 'Morning Lecture',
           date: today,
           timestamp: new Date(Date.now() - 3600000 * 1.5).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
@@ -51,10 +51,10 @@ const AttendanceManager = (() => {
         },
         {
           id: 'att-' + Date.now() + '-3',
-          rollNo: '23B91A4208',
-          name: 'Devendra Nair',
-          branch: 'AI & Data Science (AI&DS)',
-          year: '2nd Year',
+          rollNo: '24A81A4301',
+          name: 'Eshwar Kumar',
+          branch: 'CAI (Computer Science & AI)',
+          year: '2024 Batch (1st Year)',
           session: 'Morning Lecture',
           date: today,
           timestamp: new Date(Date.now() - 3600000 * 0.8).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
@@ -156,8 +156,8 @@ const AttendanceManager = (() => {
   function getFilteredLogs({ date, branch, year, session, query } = {}) {
     return logs.filter(r => {
       if (date && r.date !== date) return false;
-      if (branch && branch !== 'ALL' && r.branch !== branch) return false;
-      if (year && year !== 'ALL' && r.year !== year) return false;
+      if (branch && branch !== 'ALL' && r.branch !== branch && !r.branch.includes(branch) && !branch.includes(r.branch)) return false;
+      if (year && year !== 'ALL' && r.year !== year && !r.year.includes(year) && !year.includes(r.year)) return false;
       if (session && session !== 'ALL' && r.session !== session) return false;
       if (query) {
         const q = query.toLowerCase().trim();

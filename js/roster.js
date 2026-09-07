@@ -8,8 +8,9 @@ const RosterManager = (() => {
   const STORAGE_KEY = 'smart_attendance_roster';
   const RULES_KEY = 'smart_attendance_rules';
 
-  // Default branch mapping codes for university style roll numbers
+  // University branch mapping codes: 44=Data Science, 61=AIML, 43=CAI, etc.
   const DEFAULT_BRANCH_CODES = {
+    // 2-digit JNTU/University branch codes
     '01': 'Civil Engineering (CIVIL)',
     '02': 'Electrical & Electronics (EEE)',
     '03': 'Mechanical Engineering (MECH)',
@@ -17,28 +18,38 @@ const RosterManager = (() => {
     '05': 'Computer Science & Engineering (CSE)',
     '12': 'Information Technology (IT)',
     '42': 'Artificial Intelligence & Data Science (AI&DS)',
+    '43': 'CAI (Computer Science & AI)',
     '44': 'Data Science (DS)',
-    '43': 'Cyber Security (CS)',
+    '61': 'AIML (AI & Machine Learning)',
+    '62': 'Cyber Security (CS)',
+    '63': 'Internet of Things (IoT)',
+    // Text abbreviations
     'CSE': 'Computer Science & Engineering (CSE)',
     'ECE': 'Electronics & Communication (ECE)',
     'MECH': 'Mechanical Engineering (MECH)',
     'CIVIL': 'Civil Engineering (CIVIL)',
+    'EEE': 'Electrical & Electronics (EEE)',
+    'IT': 'Information Technology (IT)',
+    'DS': 'Data Science (DS)',
+    'CSD': 'Data Science (DS)',
     'AIDS': 'Artificial Intelligence & Data Science (AI&DS)',
-    'IT': 'Information Technology (IT)'
+    'AIML': 'AIML (AI & Machine Learning)',
+    'CSM': 'AIML (AI & Machine Learning)',
+    'CAI': 'CAI (Computer Science & AI)'
   };
 
-  // Seed data for initial demo
+  // Seed data featuring university format (24 = 2024 Batch, 44 = Data Science, 61 = AIML, 43 = CAI)
   const DEFAULT_STUDENTS = [
-    { rollNo: '21B91A0501', name: 'Aarav Sharma', branch: 'Computer Science (CSE)', year: '4th Year' },
-    { rollNo: '21B91A0502', name: 'Ananya Verma', branch: 'Computer Science (CSE)', year: '4th Year' },
-    { rollNo: '22B91A0415', name: 'Rohan Patel', branch: 'Electronics (ECE)', year: '3rd Year' },
-    { rollNo: '22B91A0420', name: 'Sneha Reddy', branch: 'Electronics (ECE)', year: '3rd Year' },
-    { rollNo: '23B91A4208', name: 'Devendra Nair', branch: 'AI & Data Science (AI&DS)', year: '2nd Year' },
-    { rollNo: '23B91A4212', name: 'Pooja Iyer', branch: 'AI & Data Science (AI&DS)', year: '2nd Year' },
-    { rollNo: '24B91A0305', name: 'Vikram Joshi', branch: 'Mechanical (MECH)', year: '1st Year' },
-    { rollNo: '24B91A0518', name: 'Meera Kulkarni', branch: 'Computer Science (CSE)', year: '1st Year' },
-    { rollNo: '23-CSE-045', name: 'Karthik Raja', branch: 'Computer Science (CSE)', year: '2nd Year' },
-    { rollNo: '24-AIDS-012', name: 'Zara Khan', branch: 'AI & Data Science (AI&DS)', year: '1st Year' }
+    { rollNo: '24A81A4401', name: 'Aarav Sharma', branch: 'Data Science (DS)', year: '2024 Batch (1st Year)' },
+    { rollNo: '24A81A4402', name: 'Bhavya Sri', branch: 'Data Science (DS)', year: '2024 Batch (1st Year)' },
+    { rollNo: '24A81A6101', name: 'Charan Teja', branch: 'AIML (AI & Machine Learning)', year: '2024 Batch (1st Year)' },
+    { rollNo: '24A81A6102', name: 'Divya Reddy', branch: 'AIML (AI & Machine Learning)', year: '2024 Batch (1st Year)' },
+    { rollNo: '24A81A4301', name: 'Eshwar Kumar', branch: 'CAI (Computer Science & AI)', year: '2024 Batch (1st Year)' },
+    { rollNo: '24A81A4302', name: 'Fathima Begum', branch: 'CAI (Computer Science & AI)', year: '2024 Batch (1st Year)' },
+    { rollNo: '24A81A0501', name: 'Gautam Verma', branch: 'Computer Science & Engineering (CSE)', year: '2024 Batch (1st Year)' },
+    { rollNo: '23A81A4415', name: 'Harika Nair', branch: 'Data Science (DS)', year: '2023 Batch (2nd Year)' },
+    { rollNo: '23A81A6120', name: 'Irfan Pasha', branch: 'AIML (AI & Machine Learning)', year: '2023 Batch (2nd Year)' },
+    { rollNo: '23A81A4310', name: 'Jyothi Priya', branch: 'CAI (Computer Science & AI)', year: '2023 Batch (2nd Year)' }
   ];
 
   let students = [];
@@ -53,6 +64,17 @@ const RosterManager = (() => {
     if (saved) {
       try {
         students = JSON.parse(saved);
+        // Ensure new format student (24A81A4401) is present so user immediately sees it
+        const hasNewFormat = students.some(s => s.rollNo === '24A81A4401');
+        if (!hasNewFormat) {
+          const existingRolls = new Set(students.map(s => s.rollNo.toUpperCase()));
+          DEFAULT_STUDENTS.forEach(ds => {
+            if (!existingRolls.has(ds.rollNo.toUpperCase())) {
+              students.push(ds);
+            }
+          });
+          saveStudents();
+        }
       } catch (e) {
         console.error('Failed to parse roster from storage', e);
         students = [...DEFAULT_STUDENTS];
@@ -70,6 +92,8 @@ const RosterManager = (() => {
       } catch (e) {
         console.error('Failed to parse rules from storage', e);
       }
+    } else {
+      branchCodes = { ...DEFAULT_BRANCH_CODES };
     }
   }
 
@@ -79,21 +103,22 @@ const RosterManager = (() => {
   }
 
   /**
-   * Intelligently classifies Branch and Academic Year from Roll Number patterns
+   * Intelligently classifies Branch and Academic Year/Batch from Roll Number patterns
    * Examples supported:
-   * 1. JNTU/State Univ format: 21B91A0501 -> Year 2021 (4th Year), Branch 05 (CSE)
-   * 2. Hyphen format: 23-CSE-045 -> Year 2023 (2nd Year), Branch CSE
-   * 3. Prefix format: 24CSE015 -> Year 2024 (1st Year), Branch CSE
+   * 1. University format: 24A81A4401 -> 24 = 2024 Batch, 44 = Data Science (DS)
+   * 2. University format: 24A81A6101 -> 24 = 2024 Batch, 61 = AIML
+   * 3. University format: 24A81A4301 -> 24 = 2024 Batch, 43 = CAI
+   * 4. Hyphen format: 24-DS-045 -> 2024 Batch, Data Science
    */
   function autoClassifyRollNumber(rawRollNo) {
-    if (!rawRollNo) return { branch: 'General', year: '1st Year' };
+    if (!rawRollNo) return { branch: 'General', year: '2024 Batch (1st Year)' };
     const roll = rawRollNo.trim().toUpperCase();
 
-    let detectedYear = '1st Year';
-    let detectedBranch = 'Computer Science (CSE)';
+    let detectedYear = '2024 Batch (1st Year)';
+    let detectedBranch = 'Data Science (DS)';
 
-    // Pattern 1: Hyphen format like 23-CSE-045 or 24-AIDS-001
-    const hyphenMatch = roll.match(/^(\d{2})-([A-Z]+)-\d+$/);
+    // Pattern 1: Hyphen format like 24-DS-045 or 24-AIML-001 or 24-CAI-012
+    const hyphenMatch = roll.match(/^(\d{2})-([A-Z0-9]+)-\d+$/);
     if (hyphenMatch) {
       const yearPrefix = parseInt(hyphenMatch[1], 10);
       const branchCode = hyphenMatch[2];
@@ -102,8 +127,8 @@ const RosterManager = (() => {
       return { branch: detectedBranch, year: detectedYear };
     }
 
-    // Pattern 2: University format like 21B91A0501 or 22A81A4212
-    // [2 digits Year][4 chars College/Degree][2 digits Branch][rest]
+    // Pattern 2: University format like 24A81A4401 (24=Batch, A8=College, 1A=Degree, 44=Branch, 01=Seq)
+    // Supports regular (1A) and lateral entry (5A)
     const univMatch = roll.match(/^(\d{2})[A-Z0-9]{4}(\d{2})[A-Z0-9]+$/);
     if (univMatch) {
       const yearPrefix = parseInt(univMatch[1], 10);
@@ -113,7 +138,7 @@ const RosterManager = (() => {
       return { branch: detectedBranch, year: detectedYear };
     }
 
-    // Pattern 3: Short prefix like 24CSE012 or 22ECE055
+    // Pattern 3: Short prefix like 24DS012 or 24AIML055 or 24CAI001
     const shortMatch = roll.match(/^(\d{2})([A-Z]{2,5})\d+$/);
     if (shortMatch) {
       const yearPrefix = parseInt(shortMatch[1], 10);
@@ -123,15 +148,15 @@ const RosterManager = (() => {
       return { branch: detectedBranch, year: detectedYear };
     }
 
-    // Pattern 4: Check if starts with 2-digit year
+    // Pattern 4: Check if starts with 2-digit year (e.g. 24...)
     const yearLead = roll.match(/^(\d{2})/);
     if (yearLead) {
       detectedYear = calculateAcademicYear(parseInt(yearLead[1], 10));
     }
 
-    // Check for branch keywords inside roll
+    // Check for branch keywords inside roll (avoid numeric false matches)
     for (const [key, name] of Object.entries(branchCodes)) {
-      if (roll.includes(key)) {
+      if (isNaN(key) && roll.includes(key)) {
         detectedBranch = name;
         break;
       }
@@ -141,16 +166,17 @@ const RosterManager = (() => {
   }
 
   function calculateAcademicYear(joinYear2Digit) {
-    // Current academic year reference (e.g. 2025/2026)
-    const currentYear = new Date().getFullYear();
-    const currentYear2Digit = currentYear % 100;
-    const diff = currentYear2Digit - joinYear2Digit;
+    const fullYear = 2000 + joinYear2Digit;
+    // Map standard cohorts (24 = 2024 Batch 1st Year, 23 = 2023 Batch 2nd Year, etc.)
+    const batchMap = {
+      24: '1st Year',
+      23: '2nd Year',
+      22: '3rd Year',
+      21: '4th Year'
+    };
 
-    if (diff <= 0) return '1st Year';
-    if (diff === 1) return '2nd Year';
-    if (diff === 2) return '3rd Year';
-    if (diff >= 3) return '4th Year';
-    return '1st Year';
+    const yearLevel = batchMap[joinYear2Digit] || (joinYear2Digit >= 25 ? '1st Year' : '4th Year');
+    return `${fullYear} Batch (${yearLevel})`;
   }
 
   /**

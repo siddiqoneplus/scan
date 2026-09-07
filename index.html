@@ -197,7 +197,7 @@
 
             <!-- Manual Roll Number Entry Fallback -->
             <form class="manual-entry-form" onsubmit="App.handleManualSubmit(event)">
-              <input type="text" id="manualRollInput" class="input-styled manual-roll-input" placeholder="Or enter Roll No (e.g. 21B91A0501)" title="Enter roll number manually">
+              <input type="text" id="manualRollInput" class="input-styled manual-roll-input" placeholder="Or enter Roll No (e.g. 24A81A4401)" title="Enter roll number manually">
               <button type="submit" class="btn btn-primary btn-sm">
                 <i class="fa-solid fa-arrow-right"></i> Verify
               </button>
@@ -268,6 +268,25 @@
         </div>
       </div>
 
+      <!-- Roll Number Decoder Matrix Guide -->
+      <div class="code-guide-card">
+        <div class="guide-header">
+          <span class="guide-title"><i class="fa-solid fa-microchip"></i> University Roll Number Auto-Decoder Matrix:</span>
+          <span class="guide-example">e.g. <code>24A81A4401</code> &rarr; <strong>2024 Batch</strong> + College <code>A8</code> + Degree <code>1A</code> + <strong>Data Science (44)</strong></span>
+        </div>
+        <div class="guide-chips">
+          <span class="guide-chip"><strong class="chip-code">24</strong> 2024 Batch</span>
+          <span class="guide-chip"><strong class="chip-code">23</strong> 2023 Batch</span>
+          <span class="guide-chip chip-highlight"><strong class="chip-code">44</strong> Data Science (DS)</span>
+          <span class="guide-chip chip-highlight"><strong class="chip-code">61</strong> AIML Branch</span>
+          <span class="guide-chip chip-highlight"><strong class="chip-code">43</strong> CAI Branch</span>
+          <span class="guide-chip"><strong class="chip-code">05</strong> CSE</span>
+          <span class="guide-chip"><strong class="chip-code">04</strong> ECE</span>
+          <span class="guide-chip"><strong class="chip-code">03</strong> MECH</span>
+          <span class="guide-chip"><strong class="chip-code">01</strong> CIVIL</span>
+        </div>
+      </div>
+
       <!-- Admin Roster Card -->
       <div class="admin-card">
         <div class="section-toolbar">
@@ -276,14 +295,22 @@
             
             <select id="rosterFilterBranch" class="select-styled" title="Filter Roster by Branch" aria-label="Filter Roster by Branch">
               <option value="ALL">All Branches</option>
-              <option value="Computer Science (CSE)">Computer Science (CSE)</option>
-              <option value="Electronics (ECE)">Electronics (ECE)</option>
-              <option value="Mechanical (MECH)">Mechanical (MECH)</option>
-              <option value="AI & Data Science (AI&DS)">AI & Data Science (AI&DS)</option>
+              <option value="Data Science (DS)">Data Science (DS)</option>
+              <option value="AIML (AI & Machine Learning)">AIML (AI & Machine Learning)</option>
+              <option value="CAI (Computer Science & AI)">CAI (Computer Science & AI)</option>
+              <option value="Computer Science & Engineering (CSE)">Computer Science (CSE)</option>
+              <option value="Electronics & Communication (ECE)">Electronics (ECE)</option>
+              <option value="Mechanical Engineering (MECH)">Mechanical (MECH)</option>
+              <option value="Civil Engineering (CIVIL)">Civil (CIVIL)</option>
+              <option value="Artificial Intelligence & Data Science (AI&DS)">AI & Data Science (AI&DS)</option>
             </select>
 
-            <select id="rosterFilterYear" class="select-styled" title="Filter Roster by Academic Year" aria-label="Filter Roster by Academic Year">
-              <option value="ALL">All Academic Years</option>
+            <select id="rosterFilterYear" class="select-styled" title="Filter Roster by Academic Year / Batch" aria-label="Filter Roster by Academic Year / Batch">
+              <option value="ALL">All Batches / Years</option>
+              <option value="2024 Batch">2024 Batch (1st Year)</option>
+              <option value="2023 Batch">2023 Batch (2nd Year)</option>
+              <option value="2022 Batch">2022 Batch (3rd Year)</option>
+              <option value="2021 Batch">2021 Batch (4th Year)</option>
               <option value="1st Year">1st Year</option>
               <option value="2nd Year">2nd Year</option>
               <option value="3rd Year">3rd Year</option>
@@ -332,14 +359,22 @@
           <div class="search-filter-group">
             <select id="cardFilterBranch" class="select-styled" title="Filter ID Cards by Branch" aria-label="Filter ID Cards by Branch" onchange="QRStudio.setFilters(this.value, undefined)">
               <option value="ALL">All Branches</option>
-              <option value="Computer Science (CSE)">Computer Science (CSE)</option>
-              <option value="Electronics (ECE)">Electronics (ECE)</option>
-              <option value="Mechanical (MECH)">Mechanical (MECH)</option>
-              <option value="AI & Data Science (AI&DS)">AI & Data Science (AI&DS)</option>
+              <option value="Data Science (DS)">Data Science (DS)</option>
+              <option value="AIML (AI & Machine Learning)">AIML (AI & Machine Learning)</option>
+              <option value="CAI (Computer Science & AI)">CAI (Computer Science & AI)</option>
+              <option value="Computer Science & Engineering (CSE)">Computer Science (CSE)</option>
+              <option value="Electronics & Communication (ECE)">Electronics (ECE)</option>
+              <option value="Mechanical Engineering (MECH)">Mechanical (MECH)</option>
+              <option value="Civil Engineering (CIVIL)">Civil (CIVIL)</option>
+              <option value="Artificial Intelligence & Data Science (AI&DS)">AI & Data Science (AI&DS)</option>
             </select>
 
-            <select id="cardFilterYear" class="select-styled" title="Filter ID Cards by Academic Year" aria-label="Filter ID Cards by Academic Year" onchange="QRStudio.setFilters(undefined, this.value)">
-              <option value="ALL">All Years</option>
+            <select id="cardFilterYear" class="select-styled" title="Filter ID Cards by Academic Year / Batch" aria-label="Filter ID Cards by Academic Year / Batch" onchange="QRStudio.setFilters(undefined, this.value)">
+              <option value="ALL">All Batches / Years</option>
+              <option value="2024 Batch">2024 Batch (1st Year)</option>
+              <option value="2023 Batch">2023 Batch (2nd Year)</option>
+              <option value="2022 Batch">2022 Batch (3rd Year)</option>
+              <option value="2021 Batch">2021 Batch (4th Year)</option>
               <option value="1st Year">1st Year</option>
               <option value="2nd Year">2nd Year</option>
               <option value="3rd Year">3rd Year</option>
@@ -389,14 +424,22 @@
 
             <select id="analyticsFilterBranch" class="select-styled" title="Filter Logs by Branch" aria-label="Filter Logs by Branch">
               <option value="ALL">All Branches</option>
-              <option value="Computer Science (CSE)">Computer Science (CSE)</option>
-              <option value="Electronics (ECE)">Electronics (ECE)</option>
-              <option value="Mechanical (MECH)">Mechanical (MECH)</option>
-              <option value="AI & Data Science (AI&DS)">AI & Data Science (AI&DS)</option>
+              <option value="Data Science (DS)">Data Science (DS)</option>
+              <option value="AIML (AI & Machine Learning)">AIML (AI & Machine Learning)</option>
+              <option value="CAI (Computer Science & AI)">CAI (Computer Science & AI)</option>
+              <option value="Computer Science & Engineering (CSE)">Computer Science (CSE)</option>
+              <option value="Electronics & Communication (ECE)">Electronics (ECE)</option>
+              <option value="Mechanical Engineering (MECH)">Mechanical (MECH)</option>
+              <option value="Civil Engineering (CIVIL)">Civil (CIVIL)</option>
+              <option value="Artificial Intelligence & Data Science (AI&DS)">AI & Data Science (AI&DS)</option>
             </select>
 
-            <select id="analyticsFilterYear" class="select-styled" title="Filter Logs by Academic Year" aria-label="Filter Logs by Academic Year">
-              <option value="ALL">All Years</option>
+            <select id="analyticsFilterYear" class="select-styled" title="Filter Logs by Academic Year / Batch" aria-label="Filter Logs by Academic Year / Batch">
+              <option value="ALL">All Batches / Years</option>
+              <option value="2024 Batch">2024 Batch (1st Year)</option>
+              <option value="2023 Batch">2023 Batch (2nd Year)</option>
+              <option value="2022 Batch">2022 Batch (3rd Year)</option>
+              <option value="2021 Batch">2021 Batch (4th Year)</option>
               <option value="1st Year">1st Year</option>
               <option value="2nd Year">2nd Year</option>
               <option value="3rd Year">3rd Year</option>
@@ -450,7 +493,7 @@
         <div class="modal-body">
           <div class="form-group">
             <label for="newStudentRoll">Roll Number / Student ID *</label>
-            <input type="text" id="newStudentRoll" class="input-styled" placeholder="e.g. 21B91A0501 or 23-CSE-045" required>
+            <input type="text" id="newStudentRoll" class="input-styled" placeholder="e.g. 24A81A4401 (DS), 24A81A6101 (AIML), 24A81A4301 (CAI)" required>
             <span class="form-hint classification-hint" id="autoClassificationHint"></span>
           </div>
 
@@ -461,12 +504,12 @@
 
           <div class="form-group">
             <label for="newStudentBranch">Assigned Branch (Auto-detected or custom)</label>
-            <input type="text" id="newStudentBranch" class="input-styled" placeholder="e.g. Computer Science (CSE)">
+            <input type="text" id="newStudentBranch" class="input-styled" placeholder="e.g. Data Science (DS), AIML, or CAI">
           </div>
 
           <div class="form-group">
-            <label for="newStudentYear">Academic Year (Auto-detected or custom)</label>
-            <input type="text" id="newStudentYear" class="input-styled" placeholder="e.g. 4th Year">
+            <label for="newStudentYear">Academic Year / Batch (Auto-detected or custom)</label>
+            <input type="text" id="newStudentYear" class="input-styled" placeholder="e.g. 2024 Batch (1st Year)">
           </div>
         </div>
         <div class="modal-footer">

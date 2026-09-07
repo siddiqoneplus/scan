@@ -1788,3 +1788,104 @@ body {
   height: 42px;
 }
 
+/* ==========================================================================
+   ROLL NUMBER DECODER MATRIX CARD
+   ========================================================================== */
+
+.code-guide-card {
+  background: rgba(18, 24, 38, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius-lg);
+  padding: 0.9rem 1.25rem;
+  margin-bottom: 1.25rem;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+}
+
+.guide-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.guide-title {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--emerald);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.guide-example {
+  font-size: 0.8rem;
+  color: var(--text-subtle);
+}
+
+.guide-example code {
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+  padding: 0.15rem 0.4rem;
+  border-radius: 4px;
+  font-family: var(--font-mono);
+}
+
+.guide-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.guide-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.3rem 0.65rem;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  font-size: 0.775rem;
+  color: var(--text-main);
+  transition: all var(--transition-fast);
+}
+
+.guide-chip:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+.guide-chip .chip-code {
+  font-family: var(--font-mono);
+  background: rgba(255, 255, 255, 0.1);
+  padding: 0.1rem 0.35rem;
+  border-radius: 4px;
+  color: #fff;
+  font-size: 0.75rem;
+}
+
+.guide-chip.chip-highlight {
+  background: rgba(16, 185, 129, 0.1);
+  border-color: rgba(16, 185, 129, 0.3);
+  color: #a7f3d0;
+}
+
+.guide-chip.chip-highlight .chip-code {
+  background: rgba(16, 185, 129, 0.25);
+  color: #34d399;
+}
+
+.sim-chip-tag {
+  display: inline-block;
+  padding: 0.1rem 0.35rem;
+  border-radius: 4px;
+  background: rgba(16, 185, 129, 0.2);
+  color: #34d399;
+  font-size: 0.7rem;
+  font-weight: 600;
+  margin-left: 0.3rem;
+}
+

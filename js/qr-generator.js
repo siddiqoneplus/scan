@@ -15,10 +15,10 @@ const QRStudio = (() => {
     let students = RosterManager.getAllStudents();
 
     if (activeFilterBranch !== 'ALL') {
-      students = students.filter(s => s.branch === activeFilterBranch);
+      students = students.filter(s => s.branch === activeFilterBranch || s.branch.includes(activeFilterBranch) || activeFilterBranch.includes(s.branch));
     }
     if (activeFilterYear !== 'ALL') {
-      students = students.filter(s => s.year === activeFilterYear);
+      students = students.filter(s => s.year === activeFilterYear || s.year.includes(activeFilterYear) || activeFilterYear.includes(s.year));
     }
 
     if (students.length === 0) {

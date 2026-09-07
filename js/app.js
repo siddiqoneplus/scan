@@ -229,12 +229,15 @@ const App = (() => {
     const container = document.getElementById('simulatorChips');
     if (!container) return;
 
-    const students = RosterManager.getAllStudents().slice(0, 6);
-    let html = students.map(s => `
-      <button class="sim-chip" onclick="App.simulateScan('${s.rollNo}')" title="Click to test scan ${s.name}">
-        <i class="fa-solid fa-qrcode"></i> ${escapeHtml(s.rollNo)} (${escapeHtml(s.name.split(' ')[0])})
-      </button>
-    `).join('');
+    const students = RosterManager.getAllStudents().slice(0, 7);
+    let html = students.map(s => {
+      const branchAbbr = s.branch.split('(')[1]?.replace(')', '') || s.branch.split(' ')[0];
+      return `
+        <button class="sim-chip" onclick="App.simulateScan('${s.rollNo}')" title="Click to test scan ${s.name} (${s.branch})">
+          <i class="fa-solid fa-qrcode"></i> <strong>${escapeHtml(s.rollNo)}</strong> <span class="sim-chip-tag">${escapeHtml(branchAbbr)}</span>
+        </button>
+      `;
+    }).join('');
 
     // Add an unauthorized test chip
     html += `
@@ -315,8 +318,8 @@ const App = (() => {
     const q = query.toLowerCase().trim();
 
     students = students.filter(s => {
-      if (branch !== 'ALL' && s.branch !== branch) return false;
-      if (year !== 'ALL' && s.year !== year) return false;
+      if (branch !== 'ALL' && s.branch !== branch && !s.branch.includes(branch) && !branch.includes(s.branch)) return false;
+      if (year !== 'ALL' && s.year !== year && !s.year.includes(year) && !year.includes(s.year)) return false;
       if (q && !s.rollNo.toLowerCase().includes(q) && !s.name.toLowerCase().includes(q)) return false;
       return true;
     });
