@@ -19,6 +19,18 @@ const AttendanceManager = (() => {
     if (saved) {
       try {
         logs = JSON.parse(saved);
+        // Auto-resync log years to match current cohort rules
+        let updated = false;
+        logs.forEach(r => {
+          if (r.rollNo && typeof RosterManager !== 'undefined') {
+            const classified = RosterManager.autoClassifyRollNumber(r.rollNo);
+            if (r.year !== classified.year) {
+              r.year = classified.year;
+              updated = true;
+            }
+          }
+        });
+        if (updated) saveLogs();
       } catch (e) {
         console.error('Failed to parse attendance logs', e);
         logs = [];
@@ -32,7 +44,7 @@ const AttendanceManager = (() => {
           rollNo: '24A81A4401',
           name: 'Aarav Sharma',
           branch: 'Data Science (DS)',
-          year: '2024 Batch (1st Year)',
+          year: '2024 Batch (3rd Year)',
           session: 'Morning Lecture',
           date: today,
           timestamp: new Date(Date.now() - 3600000 * 2).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
@@ -43,7 +55,7 @@ const AttendanceManager = (() => {
           rollNo: '24A81A6101',
           name: 'Charan Teja',
           branch: 'AIML (AI & Machine Learning)',
-          year: '2024 Batch (1st Year)',
+          year: '2024 Batch (3rd Year)',
           session: 'Morning Lecture',
           date: today,
           timestamp: new Date(Date.now() - 3600000 * 1.5).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
@@ -54,7 +66,7 @@ const AttendanceManager = (() => {
           rollNo: '24A81A4301',
           name: 'Eshwar Kumar',
           branch: 'CAI (Computer Science & AI)',
-          year: '2024 Batch (1st Year)',
+          year: '2024 Batch (3rd Year)',
           session: 'Morning Lecture',
           date: today,
           timestamp: new Date(Date.now() - 3600000 * 0.8).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),

@@ -275,8 +275,10 @@
           <span class="guide-example">e.g. <code>24A81A4401</code> &rarr; <strong>2024 Batch</strong> + College <code>A8</code> + Degree <code>1A</code> + <strong>Data Science (44)</strong></span>
         </div>
         <div class="guide-chips">
-          <span class="guide-chip"><strong class="chip-code">24</strong> 2024 Batch</span>
-          <span class="guide-chip"><strong class="chip-code">23</strong> 2023 Batch</span>
+          <span class="guide-chip chip-highlight"><strong class="chip-code">26</strong> 2026 Batch (1st Year)</span>
+          <span class="guide-chip"><strong class="chip-code">25</strong> 2025 Batch (2nd Year)</span>
+          <span class="guide-chip"><strong class="chip-code">24</strong> 2024 Batch (3rd Year)</span>
+          <span class="guide-chip"><strong class="chip-code">23</strong> 2023 Batch (4th Year)</span>
           <span class="guide-chip chip-highlight"><strong class="chip-code">44</strong> Data Science (DS)</span>
           <span class="guide-chip chip-highlight"><strong class="chip-code">61</strong> AIML Branch</span>
           <span class="guide-chip chip-highlight"><strong class="chip-code">43</strong> CAI Branch</span>
@@ -307,10 +309,10 @@
 
             <select id="rosterFilterYear" class="select-styled" title="Filter Roster by Academic Year / Batch" aria-label="Filter Roster by Academic Year / Batch">
               <option value="ALL">All Batches / Years</option>
-              <option value="2024 Batch">2024 Batch (1st Year)</option>
-              <option value="2023 Batch">2023 Batch (2nd Year)</option>
-              <option value="2022 Batch">2022 Batch (3rd Year)</option>
-              <option value="2021 Batch">2021 Batch (4th Year)</option>
+              <option value="2026 Batch">2026 Batch (1st Year)</option>
+              <option value="2025 Batch">2025 Batch (2nd Year)</option>
+              <option value="2024 Batch">2024 Batch (3rd Year)</option>
+              <option value="2023 Batch">2023 Batch (4th Year)</option>
               <option value="1st Year">1st Year</option>
               <option value="2nd Year">2nd Year</option>
               <option value="3rd Year">3rd Year</option>
@@ -371,10 +373,10 @@
 
             <select id="cardFilterYear" class="select-styled" title="Filter ID Cards by Academic Year / Batch" aria-label="Filter ID Cards by Academic Year / Batch" onchange="QRStudio.setFilters(undefined, this.value)">
               <option value="ALL">All Batches / Years</option>
-              <option value="2024 Batch">2024 Batch (1st Year)</option>
-              <option value="2023 Batch">2023 Batch (2nd Year)</option>
-              <option value="2022 Batch">2022 Batch (3rd Year)</option>
-              <option value="2021 Batch">2021 Batch (4th Year)</option>
+              <option value="2026 Batch">2026 Batch (1st Year)</option>
+              <option value="2025 Batch">2025 Batch (2nd Year)</option>
+              <option value="2024 Batch">2024 Batch (3rd Year)</option>
+              <option value="2023 Batch">2023 Batch (4th Year)</option>
               <option value="1st Year">1st Year</option>
               <option value="2nd Year">2nd Year</option>
               <option value="3rd Year">3rd Year</option>
@@ -436,10 +438,10 @@
 
             <select id="analyticsFilterYear" class="select-styled" title="Filter Logs by Academic Year / Batch" aria-label="Filter Logs by Academic Year / Batch">
               <option value="ALL">All Batches / Years</option>
-              <option value="2024 Batch">2024 Batch (1st Year)</option>
-              <option value="2023 Batch">2023 Batch (2nd Year)</option>
-              <option value="2022 Batch">2022 Batch (3rd Year)</option>
-              <option value="2021 Batch">2021 Batch (4th Year)</option>
+              <option value="2026 Batch">2026 Batch (1st Year)</option>
+              <option value="2025 Batch">2025 Batch (2nd Year)</option>
+              <option value="2024 Batch">2024 Batch (3rd Year)</option>
+              <option value="2023 Batch">2023 Batch (4th Year)</option>
               <option value="1st Year">1st Year</option>
               <option value="2nd Year">2nd Year</option>
               <option value="3rd Year">3rd Year</option>
@@ -509,7 +511,7 @@
 
           <div class="form-group">
             <label for="newStudentYear">Academic Year / Batch (Auto-detected or custom)</label>
-            <input type="text" id="newStudentYear" class="input-styled" placeholder="e.g. 2024 Batch (1st Year)">
+            <input type="text" id="newStudentYear" class="input-styled" placeholder="e.g. 2026 Batch (1st Year) or 2024 Batch (3rd Year)">
           </div>
         </div>
         <div class="modal-footer">
