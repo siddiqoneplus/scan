@@ -1,7 +1,7 @@
 /**
  * MAIN APPLICATION CONTROLLER
  * Coordinates tabs, modal dialogs, UI updates, live tickers,
- * and quick-simulator test actions.
+ * employee student assignment, and quick-simulator test actions.
  */
 
 const App = (() => {
@@ -27,6 +27,9 @@ const App = (() => {
     bindAnalyticsUI();
     bindModals();
     bindSimulator();
+
+    // Populate employee assignment selectors
+    populateEmployeeDropdowns();
 
     // Apply role-based permissions
     applyRolePermissions();
@@ -59,6 +62,42 @@ const App = (() => {
       renderAttendanceTable();
       AttendanceManager.renderCharts();
     });
+
+    // Background sync from server every 10 seconds to keep all employees & admins in sync
+    setInterval(() => {
+      RosterManager.syncFromServer();
+      AttendanceManager.syncFromServer();
+    }, 10000);
+  }
+
+  /**
+   * Populate employee accounts into assignment dropdowns
+   */
+  function populateEmployeeDropdowns() {
+    const employees = AuthManager.getEmployeeAccounts();
+    const selects = ['gformAssignTo', 'newStudentAssignedTo', 'editStudentAssignedTo', 'rosterFilterAssigned'];
+
+    selects.forEach(selectId => {
+      const el = document.getElementById(selectId);
+      if (!el) return;
+
+      const currentVal = el.value;
+      if (selectId === 'rosterFilterAssigned') {
+        el.innerHTML = `
+          <option value="ALL">All Assignments</option>
+          <option value="all">👥 All Employees (Shared)</option>
+          ${employees.map(e => `<option value="${escapeHtml(e.username)}">👤 ${escapeHtml(e.displayName)} (${escapeHtml(e.username)})</option>`).join('')}
+        `;
+      } else {
+        el.innerHTML = `
+          <option value="all" selected>👥 All Employees (Default - Shared across all staff)</option>
+          ${employees.map(e => `<option value="${escapeHtml(e.username)}">👤 ${escapeHtml(e.displayName)} (${escapeHtml(e.username)})</option>`).join('')}
+        `;
+      }
+      if (currentVal && Array.from(el.options).some(o => o.value === currentVal)) {
+        el.value = currentVal;
+      }
+    });
   }
 
   /**
@@ -90,25 +129,26 @@ const App = (() => {
   function applyRolePermissions() {
     const isAdmin = AuthManager.isAdmin();
 
-    // Admin-only tabs: Roster, QR Studio
+    // Roster tab is available to both Admin and Employee
     const rosterTab = document.getElementById('tabBtnRoster');
+    const rosterLabel = document.getElementById('tabBtnRosterLabel');
+    if (rosterTab) rosterTab.style.display = '';
+    if (rosterLabel) {
+      rosterLabel.textContent = isAdmin ? 'Admin & Google Form' : 'Assigned Roster';
+    }
+
+    // QR Cards Studio is Admin-only
     const cardsTab = document.getElementById('tabBtnCards');
-    if (rosterTab) rosterTab.style.display = isAdmin ? '' : 'none';
     if (cardsTab) cardsTab.style.display = isAdmin ? '' : 'none';
 
-    // Admin-only elements (manage accounts button, etc.)
+    // Admin-only elements (manage accounts button, add/import/clear buttons, rules)
     document.querySelectorAll('.admin-only-el').forEach(el => {
       el.style.display = isAdmin ? '' : 'none';
     });
 
-    // Employee restrictions: hide simulator bar, destructive buttons
-    if (!isAdmin) {
-      // Hide simulator chips bar
-      const simBar = document.querySelector('.quick-simulator-bar');
-      if (simBar) simBar.style.display = 'none';
-
-      // Hide clear logs & delete buttons in analytics (applied later on render)
-    }
+    // Employee restrictions: hide simulator bar
+    const simBar = document.querySelector('.quick-simulator-bar');
+    if (simBar) simBar.style.display = isAdmin ? '' : 'none';
   }
 
   /**
@@ -157,7 +197,6 @@ const App = (() => {
     if (tabId === 'scanner') {
       ScannerEngine.startCamera();
     } else {
-      // Pause camera to conserve device battery/CPU
       ScannerEngine.stopCamera();
     }
 
@@ -239,7 +278,6 @@ const App = (() => {
       `;
     }).join('');
 
-    // Add an unauthorized test chip
     html += `
       <button class="sim-chip invalid" onclick="App.simulateScan('99ZZ9A9999')" title="Simulate unassigned/invalid roll number">
         <i class="fa-solid fa-ban"></i> 99ZZ9A9999 (Unassigned)
@@ -250,7 +288,6 @@ const App = (() => {
   }
 
   function simulateScan(rollNo) {
-    // If currently on another tab, switch to scanner
     if (activeTab !== 'scanner') {
       switchTab('scanner');
     }
@@ -292,37 +329,45 @@ const App = (() => {
   }
 
   function bindRosterUI() {
-    // Search input
     const searchInput = document.getElementById('rosterSearch');
     const branchFilter = document.getElementById('rosterFilterBranch');
     const yearFilter = document.getElementById('rosterFilterYear');
+    const assignedFilter = document.getElementById('rosterFilterAssigned');
 
     const triggerFilter = () => {
       renderRosterTable(
         searchInput ? searchInput.value : '',
         branchFilter ? branchFilter.value : 'ALL',
-        yearFilter ? yearFilter.value : 'ALL'
+        yearFilter ? yearFilter.value : 'ALL',
+        assignedFilter ? assignedFilter.value : 'ALL'
       );
     };
 
     if (searchInput) searchInput.addEventListener('input', triggerFilter);
     if (branchFilter) branchFilter.addEventListener('change', triggerFilter);
     if (yearFilter) yearFilter.addEventListener('change', triggerFilter);
+    if (assignedFilter) assignedFilter.addEventListener('change', triggerFilter);
   }
 
-  function renderRosterTable(query = null, branch = null, year = null) {
+  function renderRosterTable(query = null, branch = null, year = null, assigned = null) {
     const tbody = document.getElementById('rosterTableBody');
     if (!tbody) return;
 
     const q = (query !== null ? query : (document.getElementById('rosterSearch')?.value || '')).toLowerCase().trim();
     const b = branch !== null ? branch : (document.getElementById('rosterFilterBranch')?.value || 'ALL');
     const y = year !== null ? year : (document.getElementById('rosterFilterYear')?.value || 'ALL');
+    const a = assigned !== null ? assigned : (document.getElementById('rosterFilterAssigned')?.value || 'ALL');
 
-    let students = RosterManager.getAllStudents();
+    const session = AuthManager.getSession();
+    const isAdmin = AuthManager.isAdmin();
+
+    // Roster is filtered by user permissions: Admin sees all; Employee sees assigned students
+    let students = RosterManager.getStudentsForUser(session ? session.username : null, session ? session.role : null);
 
     students = students.filter(s => {
       if (b !== 'ALL' && s.branch !== b && !s.branch.includes(b) && !b.includes(s.branch)) return false;
       if (y !== 'ALL' && s.year !== y && !s.year.includes(y) && !y.includes(s.year)) return false;
+      if (a !== 'ALL' && (s.assignedTo || 'all').toLowerCase() !== a.toLowerCase()) return false;
       if (q && !s.rollNo.toLowerCase().includes(q) && !s.name.toLowerCase().includes(q)) return false;
       return true;
     });
@@ -330,8 +375,8 @@ const App = (() => {
     if (students.length === 0) {
       tbody.innerHTML = `
         <tr>
-          <td colspan="7" class="empty-placeholder">
-            No student records found matching the criteria. Import Google Form responses or add students above.
+          <td colspan="8" class="empty-placeholder">
+            No student records found matching the criteria.
           </td>
         </tr>
       `;
@@ -340,10 +385,10 @@ const App = (() => {
 
     const today = AttendanceManager.getTodayDateStr();
     const activeSession = document.getElementById('activeSessionSelect')?.value || 'Morning Lecture';
-    const isAdmin = AuthManager.isAdmin();
 
     tbody.innerHTML = students.map((s, idx) => {
       const isPresent = AttendanceManager.isAlreadyMarked(s.rollNo, activeSession);
+      const isSharedAll = !s.assignedTo || s.assignedTo === 'all';
       return `
         <tr>
           <td class="text-subtle col-w-50">${idx + 1}</td>
@@ -352,11 +397,16 @@ const App = (() => {
           <td><span class="tag tag-branch">${escapeHtml(s.branch)}</span></td>
           <td><span class="tag tag-year">${escapeHtml(s.year)}</span></td>
           <td>
+            ${isSharedAll 
+              ? `<span class="tag tag-assigned-all"><i class="fa-solid fa-users"></i> All Employees</span>` 
+              : `<span class="tag tag-session"><i class="fa-solid fa-user-tie"></i> ${escapeHtml(s.assignedTo)}</span>`}
+          </td>
+          <td>
             ${isPresent 
               ? `<span class="tag tag-present"><i class="fa-solid fa-check"></i> Present</span>` 
               : `<span class="tag tag-absent"><i class="fa-solid fa-xmark"></i> Absent</span>`}
           </td>
-          <td class="text-right">
+          <td class="text-right ${isAdmin ? '' : 'admin-only-el'}">
             <div class="row-action-btns">
               ${isAdmin ? `
                 ${isPresent 
@@ -390,51 +440,46 @@ const App = (() => {
     const searchInput = document.getElementById('analyticsSearch');
     const branchFilter = document.getElementById('analyticsFilterBranch');
     const yearFilter = document.getElementById('analyticsFilterYear');
-    const dateInput = document.getElementById('analyticsFilterDate');
-
-    if (dateInput) {
-      dateInput.value = AttendanceManager.getTodayDateStr();
-    }
+    const dateFilter = document.getElementById('analyticsFilterDate');
 
     const triggerFilter = () => {
-      renderAttendanceTable();
+      const filtered = AttendanceManager.getFilteredLogs({
+        query: searchInput ? searchInput.value : '',
+        branch: branchFilter ? branchFilter.value : 'ALL',
+        year: yearFilter ? yearFilter.value : 'ALL',
+        date: dateFilter ? dateFilter.value : ''
+      });
+      renderAttendanceTable(filtered);
     };
 
     if (searchInput) searchInput.addEventListener('input', triggerFilter);
     if (branchFilter) branchFilter.addEventListener('change', triggerFilter);
     if (yearFilter) yearFilter.addEventListener('change', triggerFilter);
-    if (dateInput) dateInput.addEventListener('change', triggerFilter);
+    if (dateFilter) dateFilter.addEventListener('change', triggerFilter);
   }
 
-  function renderAttendanceTable() {
+  function renderAttendanceTable(records = null) {
     const tbody = document.getElementById('attendanceTableBody');
     if (!tbody) return;
 
-    const query = document.getElementById('analyticsSearch')?.value || '';
-    const branch = document.getElementById('analyticsFilterBranch')?.value || 'ALL';
-    const year = document.getElementById('analyticsFilterYear')?.value || 'ALL';
-    const date = document.getElementById('analyticsFilterDate')?.value || '';
-
-    const records = AttendanceManager.getFilteredLogs({
-      query,
-      branch,
-      year,
-      date: date || null
-    });
+    if (!records) {
+      records = AttendanceManager.getAllLogs();
+    }
 
     if (records.length === 0) {
       tbody.innerHTML = `
         <tr>
-          <td colspan="8" class="empty-placeholder">
-            No attendance records match your filter criteria.
+          <td colspan="9" class="empty-placeholder">
+            No attendance records logged for this filter.
           </td>
         </tr>
       `;
       return;
     }
 
+    const isAdmin = AuthManager.isAdmin();
+
     tbody.innerHTML = records.map((r, idx) => {
-      const isAdmin = AuthManager.isAdmin();
       return `
       <tr>
         <td class="text-subtle col-w-50">${idx + 1}</td>
@@ -444,7 +489,8 @@ const App = (() => {
         <td><span class="tag tag-year">${escapeHtml(r.year)}</span></td>
         <td class="font-mono text-cyan">${escapeHtml(r.timestamp)}</td>
         <td><span class="tag tag-session">${escapeHtml(r.session)}</span></td>
-        <td class="text-right">
+        <td><span class="tag tag-session"><i class="fa-solid fa-id-badge"></i> ${escapeHtml(r.markedBy || 'Staff Member')}</span></td>
+        <td class="text-right ${isAdmin ? '' : 'admin-only-el'}">
           ${isAdmin ? `<button class="btn btn-danger btn-sm" onclick="App.deleteRecord('${r.id}')" title="Delete record">
             <i class="fa-solid fa-trash"></i>
           </button>` : ''}
@@ -455,11 +501,10 @@ const App = (() => {
 
     // Hide clear logs button for non-admins
     const clearBtn = document.querySelector('[onclick="App.clearAttendanceLogs()"]');
-    if (clearBtn) clearBtn.style.display = AuthManager.isAdmin() ? '' : 'none';
+    if (clearBtn) clearBtn.style.display = isAdmin ? '' : 'none';
   }
 
   function bindModals() {
-    // Backdrop click close
     document.querySelectorAll('.modal-backdrop').forEach(modal => {
       modal.addEventListener('click', (e) => {
         if (e.target === modal) {
@@ -473,9 +518,11 @@ const App = (() => {
     const modal = document.getElementById(modalId);
     if (modal) {
       modal.classList.add('active');
-      // Render accounts table if opening manage accounts modal
       if (modalId === 'modalManageAccounts') {
         renderAccountsTable();
+      }
+      if (modalId === 'modalGoogleForm' || modalId === 'modalAddStudent') {
+        populateEmployeeDropdowns();
       }
     }
   }
@@ -493,29 +540,36 @@ const App = (() => {
     const name = document.getElementById('newStudentName')?.value;
     const branch = document.getElementById('newStudentBranch')?.value;
     const year = document.getElementById('newStudentYear')?.value;
+    const assignedTo = document.getElementById('newStudentAssignedTo')?.value || 'all';
 
     try {
-      RosterManager.addStudent({ rollNo, name, branch, year });
+      RosterManager.addStudent({ rollNo, name, branch, year, assignedTo });
       closeModal('modalAddStudent');
-      showToast(`Student ${rollNo} added successfully!`, 'success');
+      const assignLabel = assignedTo === 'all' ? 'All Employees' : assignedTo;
+      showToast(`Student ${rollNo} registered & assigned to ${assignLabel}!`, 'success');
       document.getElementById('formAddStudent').reset();
+      refreshAllViews();
     } catch (err) {
       showToast(err.message, 'error');
     }
   }
 
-  function submitImportGoogleForm() {
+  async function submitImportGoogleForm() {
     const csvContent = document.getElementById('gformCsvInput')?.value;
+    const assignedTo = document.getElementById('gformAssignTo')?.value || 'all';
+
     if (!csvContent || !csvContent.trim()) {
-      showToast('Please paste Google Form CSV responses or tab data.', 'warning');
+      showToast('Please paste Google Form CSV responses or upload a CSV file.', 'warning');
       return;
     }
 
     try {
-      const result = RosterManager.importGoogleFormCSV(csvContent);
+      const result = await RosterManager.importGoogleFormCSV(csvContent, assignedTo);
       closeModal('modalGoogleForm');
-      showToast(`Imported ${result.importedCount} students successfully! (${result.skippedCount} skipped)`, 'success');
+      const assignLabel = assignedTo === 'all' ? 'All Employees' : assignedTo;
+      showToast(`Imported ${result.importedCount} students & assigned to ${assignLabel}! (${result.skippedCount} skipped)`, 'success');
       document.getElementById('gformCsvInput').value = '';
+      refreshAllViews();
     } catch (err) {
       showToast('Import Error: ' + err.message, 'error');
     }
@@ -523,11 +577,11 @@ const App = (() => {
 
   function loadSampleGoogleFormTemplate() {
     const sampleCsv = `Timestamp,Student Name,Roll Number,Branch,Academic Year
-2026/09/01 10:15:30 AM,Kunal Sen,22B91A0588,Computer Science (CSE),3rd Year
-2026/09/01 10:16:45 AM,Aditi Rao,23-CSE-099,,2nd Year
-2026/09/01 10:17:12 AM,Suresh Babu,21B91A0450,Electronics (ECE),4th Year
-2026/09/01 10:18:05 AM,Harini Murugan,24-AIDS-055,,1st Year
-2026/09/01 10:19:22 AM,Abhinav Sharma,24B91A0318,,`;
+2026/09/01 10:15:30 AM,Kunal Sen,24A81A4401,Data Science,3rd Year
+2026/09/01 10:16:45 AM,Aditi Rao,24A81A6101,AIML,3rd Year
+2026/09/01 10:17:12 AM,Suresh Babu,24A81A4301,CAI,3rd Year
+2026/09/01 10:18:05 AM,Harini Murugan,26A81A4403,Data Science,1st Year
+2026/09/01 10:19:22 AM,Abhinav Sharma,25A81A6102,AIML,2nd Year`;
 
     const textarea = document.getElementById('gformCsvInput');
     if (textarea) {
@@ -542,15 +596,18 @@ const App = (() => {
       showToast('Student not found.', 'error');
       return;
     }
+    populateEmployeeDropdowns();
     const rollInput = document.getElementById('editStudentRoll');
     const nameInput = document.getElementById('editStudentName');
     const branchInput = document.getElementById('editStudentBranch');
     const yearInput = document.getElementById('editStudentYear');
+    const assignedInput = document.getElementById('editStudentAssignedTo');
 
     if (rollInput) rollInput.value = student.rollNo;
     if (nameInput) nameInput.value = student.name;
     if (branchInput) branchInput.value = student.branch;
     if (yearInput) yearInput.value = student.year;
+    if (assignedInput) assignedInput.value = student.assignedTo || 'all';
 
     openModal('modalEditStudent');
   }
@@ -561,9 +618,10 @@ const App = (() => {
     const name = document.getElementById('editStudentName')?.value;
     const branch = document.getElementById('editStudentBranch')?.value;
     const year = document.getElementById('editStudentYear')?.value;
+    const assignedTo = document.getElementById('editStudentAssignedTo')?.value || 'all';
 
     try {
-      RosterManager.updateStudent(rollNo, { name, branch, year });
+      RosterManager.updateStudent(rollNo, { name, branch, year, assignedTo });
       closeModal('modalEditStudent');
       showToast(`Student ${rollNo} updated successfully!`, 'success');
       refreshAllViews();
@@ -612,7 +670,7 @@ const App = (() => {
       const textarea = document.getElementById('gformCsvInput');
       if (textarea) {
         textarea.value = text;
-        showToast(`Loaded ${file.name} (${text.split(/\r\n|\n|\r/).length} lines). Click "Process Import" to finish!`, 'info');
+        showToast(`Loaded ${file.name} (${text.split(/\r\n|\n|\r/).length} lines). Ready to process!`, 'info');
       }
     };
     reader.readAsText(file);
@@ -787,6 +845,7 @@ const App = (() => {
       showToast(`Account "${username}" created successfully!`, 'success');
       document.getElementById('formAddAccount').reset();
       renderAccountsTable();
+      populateEmployeeDropdowns();
     } catch (err) {
       showToast(err.message, 'error');
     }
@@ -801,6 +860,7 @@ const App = (() => {
         AuthManager.deleteAccount(username);
         showToast(`Account "${username}" deleted.`, 'info');
         renderAccountsTable();
+        populateEmployeeDropdowns();
       } catch (err) {
         showToast(err.message, 'error');
       }
@@ -864,7 +924,8 @@ const App = (() => {
     handleLogout,
     submitAddAccount,
     deleteAccountEntry,
-    renderAccountsTable
+    renderAccountsTable,
+    filterRoster: () => renderRosterTable()
   };
 })();
 

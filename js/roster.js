@@ -1,7 +1,8 @@
 /**
  * ROSTER & GOOGLE FORM INTEGRATION ENGINE
  * Handles student registration, automatic roll number classification,
- * Google Form CSV import, and whitelist validation.
+ * Google Form CSV import, employee assignment, and whitelist validation.
+ * Synchronizes with backend REST API for multi-device / multi-employee persistence.
  */
 
 const RosterManager = (() => {
@@ -39,18 +40,19 @@ const RosterManager = (() => {
   };
 
   // Seed data featuring university format (26=1st Year, 25=2nd Year, 24=3rd Year, 23=4th Year)
+  // All assigned to 'all' (All Employees) by default
   const DEFAULT_STUDENTS = [
-    { rollNo: '24A81A4401', name: 'Aarav Sharma', branch: 'Data Science (DS)', year: '2024 Batch (3rd Year)' },
-    { rollNo: '24A81A6101', name: 'Charan Teja', branch: 'AIML (AI & Machine Learning)', year: '2024 Batch (3rd Year)' },
-    { rollNo: '24A81A4301', name: 'Eshwar Kumar', branch: 'CAI (Computer Science & AI)', year: '2024 Batch (3rd Year)' },
-    { rollNo: '25A81A4402', name: 'Bhavya Sri', branch: 'Data Science (DS)', year: '2025 Batch (2nd Year)' },
-    { rollNo: '25A81A6102', name: 'Divya Reddy', branch: 'AIML (AI & Machine Learning)', year: '2025 Batch (2nd Year)' },
-    { rollNo: '26A81A4403', name: 'Gautam Verma', branch: 'Data Science (DS)', year: '2026 Batch (1st Year)' },
-    { rollNo: '26A81A6103', name: 'Fathima Begum', branch: 'AIML (AI & Machine Learning)', year: '2026 Batch (1st Year)' },
-    { rollNo: '26A81A4303', name: 'Karthik Raja', branch: 'CAI (Computer Science & AI)', year: '2026 Batch (1st Year)' },
-    { rollNo: '23A81A4415', name: 'Harika Nair', branch: 'Data Science (DS)', year: '2023 Batch (4th Year)' },
-    { rollNo: '23A81A6120', name: 'Irfan Pasha', branch: 'AIML (AI & Machine Learning)', year: '2023 Batch (4th Year)' },
-    { rollNo: '23A81A4310', name: 'Jyothi Priya', branch: 'CAI (Computer Science & AI)', year: '2023 Batch (4th Year)' }
+    { rollNo: '24A81A4401', name: 'Aarav Sharma', branch: 'Data Science (DS)', year: '2024 Batch (3rd Year)', assignedTo: 'all' },
+    { rollNo: '24A81A6101', name: 'Charan Teja', branch: 'AIML (AI & Machine Learning)', year: '2024 Batch (3rd Year)', assignedTo: 'all' },
+    { rollNo: '24A81A4301', name: 'Eshwar Kumar', branch: 'CAI (Computer Science & AI)', year: '2024 Batch (3rd Year)', assignedTo: 'all' },
+    { rollNo: '25A81A4402', name: 'Bhavya Sri', branch: 'Data Science (DS)', year: '2025 Batch (2nd Year)', assignedTo: 'all' },
+    { rollNo: '25A81A6102', name: 'Divya Reddy', branch: 'AIML (AI & Machine Learning)', year: '2025 Batch (2nd Year)', assignedTo: 'all' },
+    { rollNo: '26A81A4403', name: 'Gautam Verma', branch: 'Data Science (DS)', year: '2026 Batch (1st Year)', assignedTo: 'all' },
+    { rollNo: '26A81A6103', name: 'Fathima Begum', branch: 'AIML (AI & Machine Learning)', year: '2026 Batch (1st Year)', assignedTo: 'all' },
+    { rollNo: '26A81A4303', name: 'Karthik Raja', branch: 'CAI (Computer Science & AI)', year: '2026 Batch (1st Year)', assignedTo: 'all' },
+    { rollNo: '23A81A4415', name: 'Harika Nair', branch: 'Data Science (DS)', year: '2023 Batch (4th Year)', assignedTo: 'all' },
+    { rollNo: '23A81A6120', name: 'Irfan Pasha', branch: 'AIML (AI & Machine Learning)', year: '2023 Batch (4th Year)', assignedTo: 'all' },
+    { rollNo: '23A81A4310', name: 'Jyothi Priya', branch: 'CAI (Computer Science & AI)', year: '2023 Batch (4th Year)', assignedTo: 'all' }
   ];
 
   let students = [];
@@ -58,6 +60,7 @@ const RosterManager = (() => {
 
   function init() {
     loadStudents();
+    syncFromServer();
   }
 
   function loadStudents() {
@@ -68,6 +71,10 @@ const RosterManager = (() => {
         // Automatically re-sync year for students to match latest batch mapping rules (23->4th, 24->3rd, 25->2nd, 26->1st)
         let updated = false;
         students.forEach(s => {
+          if (!s.assignedTo) {
+            s.assignedTo = 'all';
+            updated = true;
+          }
           if (s.rollNo) {
             const classified = autoClassifyRollNumber(s.rollNo);
             if (s.year !== classified.year) {
@@ -77,7 +84,7 @@ const RosterManager = (() => {
           }
         });
 
-        // Ensure 24A81A4401 is present
+        // Ensure sample 24A81A4401 is present
         const hasSample = students.some(s => s.rollNo === '24A81A4401');
         if (!hasSample) {
           const existingRolls = new Set(students.map(s => s.rollNo.toUpperCase()));
@@ -90,16 +97,16 @@ const RosterManager = (() => {
         }
 
         if (updated) {
-          saveStudents();
+          saveStudents(false);
         }
       } catch (e) {
         console.error('Failed to parse roster from storage', e);
         students = [...DEFAULT_STUDENTS];
-        saveStudents();
+        saveStudents(false);
       }
     } else {
       students = [...DEFAULT_STUDENTS];
-      saveStudents();
+      saveStudents(false);
     }
 
     const savedRules = localStorage.getItem(RULES_KEY);
@@ -114,18 +121,43 @@ const RosterManager = (() => {
     }
   }
 
-  function saveStudents() {
+  /**
+   * Sync roster data with centralized backend server
+   */
+  async function syncFromServer() {
+    try {
+      const response = await fetch('/api/roster');
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success && Array.isArray(data.students) && data.students.length > 0) {
+          students = data.students.map(s => ({
+            ...s,
+            assignedTo: s.assignedTo || 'all'
+          }));
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(students));
+          window.dispatchEvent(new CustomEvent('roster:updated', { detail: { count: students.length } }));
+        }
+      }
+    } catch (e) {
+      // Offline mode: proceed with localStorage
+    }
+  }
+
+  function saveStudents(syncToServer = true) {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(students));
     window.dispatchEvent(new CustomEvent('roster:updated', { detail: { count: students.length } }));
+
+    if (syncToServer) {
+      fetch('/api/roster', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ students })
+      }).catch(err => console.warn('Could not sync roster to server:', err));
+    }
   }
 
   /**
    * Intelligently classifies Branch and Academic Year/Batch from Roll Number patterns
-   * Examples supported:
-   * 1. University format: 24A81A4401 -> 24 = 2024 Batch, 44 = Data Science (DS)
-   * 2. University format: 24A81A6101 -> 24 = 2024 Batch, 61 = AIML
-   * 3. University format: 24A81A4301 -> 24 = 2024 Batch, 43 = CAI
-   * 4. Hyphen format: 24-DS-045 -> 2024 Batch, Data Science
    */
   function autoClassifyRollNumber(rawRollNo) {
     if (!rawRollNo) return { branch: 'General', year: '2024 Batch (1st Year)' };
@@ -145,7 +177,6 @@ const RosterManager = (() => {
     }
 
     // Pattern 2: University format like 24A81A4401 (24=Batch, A8=College, 1A=Degree, 44=Branch, 01=Seq)
-    // Supports regular (1A) and lateral entry (5A)
     const univMatch = roll.match(/^(\d{2})[A-Z0-9]{4}(\d{2})[A-Z0-9]+$/);
     if (univMatch) {
       const yearPrefix = parseInt(univMatch[1], 10);
@@ -184,11 +215,6 @@ const RosterManager = (() => {
 
   function calculateAcademicYear(joinYear2Digit) {
     const fullYear = 2000 + joinYear2Digit;
-    // Map cohorts for the academic cycle:
-    // 26 -> 2026 Batch (1st Year)
-    // 25 -> 2025 Batch (2nd Year)
-    // 24 -> 2024 Batch (3rd Year)
-    // 23 -> 2023 Batch (4th Year)
     const batchMap = {
       26: '1st Year',
       25: '2nd Year',
@@ -201,12 +227,20 @@ const RosterManager = (() => {
   }
 
   /**
-   * Check if a roll number is in the admin whitelist
+   * Check if a roll number is in the whitelist and assigned to the user
    */
-  function isRollNumberAssigned(rawRollNo) {
+  function isRollNumberAssigned(rawRollNo, username = null, role = null) {
     if (!rawRollNo) return false;
     const cleanRoll = rawRollNo.trim().toUpperCase();
-    return students.some(s => s.rollNo.trim().toUpperCase() === cleanRoll);
+    const student = findStudent(cleanRoll);
+    if (!student) return false;
+
+    // Admins have access to all students
+    if (!role || role === 'admin') return true;
+
+    // Employees have access if assignedTo is 'all' or their username
+    const assigned = (student.assignedTo || 'all').toLowerCase();
+    return assigned === 'all' || (username && assigned === username.toLowerCase());
   }
 
   /**
@@ -219,13 +253,26 @@ const RosterManager = (() => {
   }
 
   /**
+   * Get students accessible for a given user & role
+   * Admin gets all; Employees get those assigned to 'all' or to their username
+   */
+  function getStudentsForUser(username, role) {
+    if (!role || role === 'admin') return [...students];
+    const cleanUser = (username || '').toLowerCase().trim();
+    return students.filter(s => {
+      const a = (s.assignedTo || 'all').toLowerCase().trim();
+      return a === 'all' || a === cleanUser;
+    });
+  }
+
+  /**
    * Add a new student
    */
-  function addStudent({ rollNo, name, branch, year }) {
+  function addStudent({ rollNo, name, branch, year, assignedTo = 'all' }) {
     if (!rollNo || !name) throw new Error('Roll Number and Name are required.');
     const cleanRoll = rollNo.trim().toUpperCase();
     
-    if (isRollNumberAssigned(cleanRoll)) {
+    if (findStudent(cleanRoll)) {
       throw new Error(`Roll Number ${cleanRoll} is already registered.`);
     }
 
@@ -235,11 +282,12 @@ const RosterManager = (() => {
       name: name.trim(),
       branch: branch && branch.trim() !== '' ? branch.trim() : classification.branch,
       year: year && year.trim() !== '' ? year.trim() : classification.year,
+      assignedTo: assignedTo && assignedTo.trim() !== '' ? assignedTo.trim() : 'all',
       addedAt: new Date().toISOString()
     };
 
     students.unshift(newStudent);
-    saveStudents();
+    saveStudents(true);
     return newStudent;
   }
 
@@ -252,7 +300,7 @@ const RosterManager = (() => {
     if (index === -1) throw new Error(`Student ${rollNo} not found.`);
 
     students[index] = { ...students[index], ...updatedData };
-    saveStudents();
+    saveStudents(true);
     return students[index];
   }
 
@@ -264,17 +312,30 @@ const RosterManager = (() => {
     const initialLen = students.length;
     students = students.filter(s => s.rollNo.trim().toUpperCase() !== cleanRoll);
     if (students.length !== initialLen) {
-      saveStudents();
+      saveStudents(true);
       return true;
     }
     return false;
   }
 
   /**
+   * Assign all existing students to a specific target ('all' or specific employee)
+   */
+  function assignAllStudents(target = 'all') {
+    students = students.map(s => ({
+      ...s,
+      assignedTo: target
+    }));
+    saveStudents(true);
+    return students;
+  }
+
+  /**
    * Google Form / Sheet CSV Importer
    * Parses CSV string and maps columns automatically.
+   * Assigns all imported students to assignedTo (defaults to 'all' = All Employees).
    */
-  function importGoogleFormCSV(csvString) {
+  async function importGoogleFormCSV(csvString, assignedTo = 'all') {
     if (!csvString || !csvString.trim()) {
       throw new Error('CSV text is empty.');
     }
@@ -312,9 +373,7 @@ const RosterManager = (() => {
     let branchIndex = headers.findIndex(h => h.includes('branch') || h.includes('dept') || h.includes('department'));
     let yearIndex = headers.findIndex(h => h.includes('year') || h.includes('sem') || h.includes('class'));
 
-    // Fallbacks if headers didn't match
     if (rollIndex === -1) {
-      // Look for second column or first column
       rollIndex = 1 < headers.length ? 1 : 0;
     }
     if (nameIndex === -1) {
@@ -323,6 +382,8 @@ const RosterManager = (() => {
 
     let importedCount = 0;
     let skippedCount = 0;
+    const targetAssignment = assignedTo || 'all';
+    const importedList = [];
 
     for (let i = 1; i < lines.length; i++) {
       const line = lines[i].trim();
@@ -342,48 +403,60 @@ const RosterManager = (() => {
       const year = (yearIndex !== -1 && cols[yearIndex]) ? cols[yearIndex].trim() : auto.year;
       const name = rawName || `Student ${rawRoll}`;
 
+      const studentItem = {
+        rollNo: rawRoll,
+        name,
+        branch,
+        year,
+        assignedTo: targetAssignment,
+        importedAt: new Date().toISOString()
+      };
+
+      importedList.push(studentItem);
+
       const existingIdx = students.findIndex(s => s.rollNo.toUpperCase() === rawRoll);
       if (existingIdx !== -1) {
-        // Update existing student
         students[existingIdx] = {
           ...students[existingIdx],
-          name,
-          branch,
-          year,
-          updatedAt: new Date().toISOString()
+          ...studentItem
         };
-        importedCount++;
       } else {
-        // Add new student
-        students.push({
-          rollNo: rawRoll,
-          name,
-          branch,
-          year,
-          addedAt: new Date().toISOString()
-        });
-        importedCount++;
+        students.push(studentItem);
       }
+      importedCount++;
     }
 
-    saveStudents();
-    return { importedCount, skippedCount, total: students.length };
+    // Save locally and sync to server API
+    saveStudents(true);
+
+    // Also explicitly notify backend import endpoint
+    try {
+      await fetch('/api/roster/import', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ students: importedList, assignedTo: targetAssignment })
+      });
+    } catch (err) {
+      console.warn('Server import sync notice:', err);
+    }
+
+    return { importedCount, skippedCount, total: students.length, assignedTo: targetAssignment };
   }
 
   function resetToDefault() {
     students = [...DEFAULT_STUDENTS];
-    saveStudents();
+    saveStudents(true);
     return students;
   }
 
   function clearAll() {
     students = [];
-    saveStudents();
+    saveStudents(true);
     return [];
   }
 
   /**
-   * Export registered student whitelist as CSV
+   * Export registered student whitelist as CSV with Assigned To column
    */
   function exportCSV() {
     if (students.length === 0) {
@@ -392,14 +465,16 @@ const RosterManager = (() => {
     const today = (typeof AttendanceManager !== 'undefined') ? AttendanceManager.getTodayDateStr() : '';
     const activeSession = document.getElementById('activeSessionSelect')?.value || 'Morning Lecture';
 
-    const headers = ['Roll Number', 'Student Name', 'Branch', 'Academic Year', 'Today Status'];
+    const headers = ['Roll Number', 'Student Name', 'Branch', 'Academic Year', 'Assigned To', 'Today Status'];
     const rows = students.map(s => {
       const isPresent = (typeof AttendanceManager !== 'undefined') ? AttendanceManager.isAlreadyMarked(s.rollNo, activeSession) : false;
+      const assignedLabel = s.assignedTo === 'all' || !s.assignedTo ? 'All Employees' : s.assignedTo;
       return [
         `"${s.rollNo}"`,
         `"${s.name.replace(/"/g, '""')}"`,
         `"${s.branch.replace(/"/g, '""')}"`,
         `"${s.year.replace(/"/g, '""')}"`,
+        `"${assignedLabel.replace(/"/g, '""')}"`,
         `"${isPresent ? 'Present' : 'Absent'}"`
       ];
     });
@@ -426,6 +501,13 @@ const RosterManager = (() => {
     branchCodes[cleanCode] = branchName.trim();
     localStorage.setItem(RULES_KEY, JSON.stringify(branchCodes));
     window.dispatchEvent(new CustomEvent('roster:updated', { detail: { count: students.length } }));
+
+    fetch('/api/rules', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ rules: branchCodes })
+    }).catch(e => console.warn('Rule sync error:', e));
+
     return branchCodes;
   }
 
@@ -434,17 +516,27 @@ const RosterManager = (() => {
     delete branchCodes[cleanCode];
     localStorage.setItem(RULES_KEY, JSON.stringify(branchCodes));
     window.dispatchEvent(new CustomEvent('roster:updated', { detail: { count: students.length } }));
+
+    fetch('/api/rules', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ rules: branchCodes })
+    }).catch(e => console.warn('Rule sync error:', e));
+
     return branchCodes;
   }
 
   return {
     init,
+    syncFromServer,
     getAllStudents: () => [...students],
+    getStudentsForUser,
     findStudent,
     isRollNumberAssigned,
     addStudent,
     updateStudent,
     deleteStudent,
+    assignAllStudents,
     autoClassifyRollNumber,
     importGoogleFormCSV,
     resetToDefault,

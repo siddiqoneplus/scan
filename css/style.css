@@ -987,6 +987,16 @@ body {
   color: #6ee7b7;
 }
 
+.tag-assigned-all {
+  background: rgba(16, 185, 129, 0.18);
+  color: #34d399;
+  border: 1px solid rgba(16, 185, 129, 0.35);
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
 .tag-absent {
   background: rgba(239, 68, 68, 0.15);
   color: #f87171;

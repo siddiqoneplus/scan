@@ -2,6 +2,7 @@
  * AUTHENTICATION & SESSION MANAGER
  * Handles login/logout, role-based access control, session persistence,
  * and employee account management for the Smart Attendance System.
+ * Synchronizes with backend REST API for centralized multi-device account management.
  */
 
 const AuthManager = (() => {
@@ -31,6 +32,21 @@ const AuthManager = (() => {
     if (!localStorage.getItem(ACCOUNTS_KEY)) {
       localStorage.setItem(ACCOUNTS_KEY, JSON.stringify(DEFAULT_ACCOUNTS));
     }
+    syncFromServer();
+  }
+
+  async function syncFromServer() {
+    try {
+      const response = await fetch('/api/accounts');
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success && Array.isArray(data.accounts) && data.accounts.length > 0) {
+          localStorage.setItem(ACCOUNTS_KEY, JSON.stringify(data.accounts));
+        }
+      }
+    } catch (e) {
+      // Offline fallback: keep local accounts
+    }
   }
 
   function getAccounts() {
@@ -41,8 +57,16 @@ const AuthManager = (() => {
     }
   }
 
-  function saveAccounts(accounts) {
+  function saveAccounts(accounts, syncToServer = true) {
     localStorage.setItem(ACCOUNTS_KEY, JSON.stringify(accounts));
+
+    if (syncToServer) {
+      fetch('/api/accounts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ accounts })
+      }).catch(err => console.warn('Could not sync accounts to server:', err));
+    }
   }
 
   /**
@@ -145,7 +169,7 @@ const AuthManager = (() => {
       createdAt: new Date().toISOString()
     });
 
-    saveAccounts(accounts);
+    saveAccounts(accounts, true);
     return true;
   }
 
@@ -166,7 +190,7 @@ const AuthManager = (() => {
       throw new Error('Account not found.');
     }
 
-    saveAccounts(filtered);
+    saveAccounts(filtered, true);
     return true;
   }
 
@@ -179,6 +203,16 @@ const AuthManager = (() => {
       displayName: a.displayName,
       role: a.role,
       createdAt: a.createdAt
+    }));
+  }
+
+  /**
+   * List employee accounts for assignment dropdowns
+   */
+  function getEmployeeAccounts() {
+    return getAccounts().filter(a => a.role === 'employee').map(a => ({
+      username: a.username,
+      displayName: a.displayName
     }));
   }
 
@@ -198,12 +232,13 @@ const AuthManager = (() => {
       accounts[idx].role = updates.role;
     }
 
-    saveAccounts(accounts);
+    saveAccounts(accounts, true);
     return true;
   }
 
   return {
     init,
+    syncFromServer,
     login,
     logout,
     getSession,
@@ -214,6 +249,7 @@ const AuthManager = (() => {
     addAccount,
     deleteAccount,
     listAccounts,
+    getEmployeeAccounts,
     updateAccount
   };
 })();

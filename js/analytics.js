@@ -1,7 +1,7 @@
 /**
  * ATTENDANCE ANALYTICS & LOGGING ENGINE
  * Manages check-in records, duplicate prevention, statistics,
- * Chart.js visual data binding, and Google Sheets/Excel CSV export.
+ * Chart.js visual data binding, multi-employee persistence, and CSV export.
  */
 
 const AttendanceManager = (() => {
@@ -12,6 +12,7 @@ const AttendanceManager = (() => {
 
   function init() {
     loadLogs();
+    syncFromServer();
   }
 
   function loadLogs() {
@@ -30,56 +31,46 @@ const AttendanceManager = (() => {
             }
           }
         });
-        if (updated) saveLogs();
+        if (updated) saveLogs(false);
       } catch (e) {
         console.error('Failed to parse attendance logs', e);
         logs = [];
       }
     } else {
-      // Create a couple of sample records for today's demo
-      const today = getTodayDateStr();
-      logs = [
-        {
-          id: 'att-' + Date.now() + '-1',
-          rollNo: '24A81A4401',
-          name: 'Aarav Sharma',
-          branch: 'Data Science (DS)',
-          year: '2024 Batch (3rd Year)',
-          session: 'Morning Lecture',
-          date: today,
-          timestamp: new Date(Date.now() - 3600000 * 2).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
-          status: 'Present'
-        },
-        {
-          id: 'att-' + Date.now() + '-2',
-          rollNo: '24A81A6101',
-          name: 'Charan Teja',
-          branch: 'AIML (AI & Machine Learning)',
-          year: '2024 Batch (3rd Year)',
-          session: 'Morning Lecture',
-          date: today,
-          timestamp: new Date(Date.now() - 3600000 * 1.5).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
-          status: 'Present'
-        },
-        {
-          id: 'att-' + Date.now() + '-3',
-          rollNo: '24A81A4301',
-          name: 'Eshwar Kumar',
-          branch: 'CAI (Computer Science & AI)',
-          year: '2024 Batch (3rd Year)',
-          session: 'Morning Lecture',
-          date: today,
-          timestamp: new Date(Date.now() - 3600000 * 0.8).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
-          status: 'Present'
-        }
-      ];
-      saveLogs();
+      logs = [];
     }
   }
 
-  function saveLogs() {
+  /**
+   * Fetch logs from centralized backend server
+   */
+  async function syncFromServer() {
+    try {
+      const response = await fetch('/api/attendance');
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success && Array.isArray(data.logs)) {
+          logs = data.logs;
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(logs));
+          window.dispatchEvent(new CustomEvent('attendance:updated', { detail: { count: logs.length } }));
+        }
+      }
+    } catch (e) {
+      // Offline fallback: use local logs
+    }
+  }
+
+  function saveLogs(syncToServer = true) {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(logs));
     window.dispatchEvent(new CustomEvent('attendance:updated', { detail: { count: logs.length } }));
+
+    if (syncToServer) {
+      fetch('/api/attendance', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ logs })
+      }).catch(err => console.warn('Could not sync attendance logs to server:', err));
+    }
   }
 
   function getTodayDateStr() {
@@ -124,6 +115,9 @@ const AttendanceManager = (() => {
       };
     }
 
+    const currentSession = (typeof AuthManager !== 'undefined') ? AuthManager.getSession() : null;
+    const markedBy = currentSession ? `${currentSession.displayName} (${currentSession.role === 'admin' ? 'Admin' : 'Staff'})` : 'Staff Member';
+
     const now = new Date();
     const newRecord = {
       id: 'att-' + Date.now() + '-' + Math.random().toString(36).substr(2, 5),
@@ -134,11 +128,12 @@ const AttendanceManager = (() => {
       session: sessionName,
       date: today,
       timestamp: now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
-      status: 'Present'
+      status: 'Present',
+      markedBy: markedBy
     };
 
     logs.unshift(newRecord);
-    saveLogs();
+    saveLogs(true);
 
     return {
       success: true,
@@ -151,7 +146,13 @@ const AttendanceManager = (() => {
    */
   function deleteRecord(recordId) {
     logs = logs.filter(r => r.id !== recordId);
-    saveLogs();
+    saveLogs(false);
+
+    fetch('/api/attendance', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: recordId })
+    }).catch(err => console.warn('Could not delete record on server:', err));
   }
 
   /**
@@ -163,7 +164,7 @@ const AttendanceManager = (() => {
     const initialLen = logs.length;
     logs = logs.filter(r => !(r.rollNo.toUpperCase() === cleanRoll && r.date === today && (sessionName ? r.session === sessionName : true)));
     if (logs.length !== initialLen) {
-      saveLogs();
+      saveLogs(true);
       return true;
     }
     return false;
@@ -174,7 +175,13 @@ const AttendanceManager = (() => {
    */
   function clearAllLogs() {
     logs = [];
-    saveLogs();
+    saveLogs(false);
+
+    fetch('/api/attendance', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: 'all' })
+    }).catch(err => console.warn('Could not clear logs on server:', err));
   }
 
   /**
@@ -243,7 +250,7 @@ const AttendanceManager = (() => {
       throw new Error('No attendance records available to export.');
     }
 
-    const headers = ['Roll Number', 'Student Name', 'Branch', 'Year', 'Date', 'Time', 'Session', 'Status'];
+    const headers = ['Roll Number', 'Student Name', 'Branch', 'Year', 'Date', 'Time', 'Session', 'Status', 'Marked By'];
     const rows = dataToExport.map(r => [
       `"${r.rollNo}"`,
       `"${r.name.replace(/"/g, '""')}"`,
@@ -252,7 +259,8 @@ const AttendanceManager = (() => {
       `"${r.date}"`,
       `"${r.timestamp}"`,
       `"${r.session.replace(/"/g, '""')}"`,
-      `"${r.status}"`
+      `"${r.status}"`,
+      `"${(r.markedBy || 'Staff Member').replace(/"/g, '""')}"`
     ]);
 
     const csvContent = '\uFEFF' + [headers.join(','), ...rows.map(e => e.join(','))].join('\r\n');
@@ -374,6 +382,7 @@ const AttendanceManager = (() => {
 
   return {
     init,
+    syncFromServer,
     getAllLogs: () => [...logs],
     getFilteredLogs,
     isAlreadyMarked,

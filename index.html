@@ -45,7 +45,7 @@
       </button>
       <button class="nav-btn" data-tab="roster" id="tabBtnRoster" onclick="App.switchTab('roster')">
         <i class="fa-solid fa-users-viewfinder"></i>
-        <span>Admin & Google Form</span>
+        <span id="tabBtnRosterLabel">Admin & Google Form</span>
       </button>
       <button class="nav-btn" data-tab="cards" id="tabBtnCards" onclick="App.switchTab('cards')">
         <i class="fa-solid fa-id-card"></i>
@@ -323,9 +323,17 @@
               <option value="3rd Year">3rd Year</option>
               <option value="4th Year">4th Year</option>
             </select>
+
+            <select id="rosterFilterAssigned" class="select-styled" title="Filter Roster by Assignment" aria-label="Filter Roster by Assignment" onchange="App.filterRoster()">
+              <option value="ALL">All Assignments</option>
+              <option value="all">👥 All Employees (Shared)</option>
+            </select>
           </div>
 
-          <div class="flex-btn-group">
+          <div class="flex-btn-group admin-only-el">
+            <button class="btn btn-secondary btn-sm" onclick="App.openBranchRulesModal()" title="View and customize branch roll number codes">
+              <i class="fa-solid fa-sliders"></i> Branch Rules
+            </button>
             <button class="btn btn-primary btn-sm" onclick="App.openModal('modalAddStudent')" title="Register single student">
               <i class="fa-solid fa-user-plus"></i> Add Student
             </button>
@@ -354,8 +362,9 @@
                 <th>Student Name</th>
                 <th>Assigned Branch</th>
                 <th>Academic Year</th>
+                <th>Assigned To</th>
                 <th>Today's Status</th>
-                <th class="text-right">Action</th>
+                <th class="text-right admin-only-el">Action</th>
               </tr>
             </thead>
             <tbody id="rosterTableBody">
@@ -493,7 +502,8 @@
                 <th>Year</th>
                 <th>Check-in Time</th>
                 <th>Session</th>
-                <th class="text-right">Action</th>
+                <th>Marked By</th>
+                <th class="text-right admin-only-el">Action</th>
               </tr>
             </thead>
             <tbody id="attendanceTableBody">
@@ -535,6 +545,14 @@
             <label for="newStudentYear">Academic Year / Batch (Auto-detected or custom)</label>
             <input type="text" id="newStudentYear" class="input-styled" placeholder="e.g. 2026 Batch (1st Year) or 2024 Batch (3rd Year)">
           </div>
+
+          <div class="form-group">
+            <label for="newStudentAssignedTo"><i class="fa-solid fa-users text-cyan"></i> Assign To Employee / Staff</label>
+            <select id="newStudentAssignedTo" class="input-styled w-full">
+              <option value="all" selected>👥 All Employees (Shared across all staff)</option>
+            </select>
+            <span class="form-hint">Allows assigned staff to scan and record attendance for this student.</span>
+          </div>
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary" onclick="App.closeModal('modalAddStudent')">Cancel</button>
@@ -554,8 +572,16 @@
       <div class="modal-body">
         <p class="text-muted">
           Import students from Google Forms, Google Sheets, or Microsoft Excel. The engine automatically detects 
-          <strong>Roll Number</strong> and classifies <strong>Branch</strong> and <strong>Academic Year</strong>.
+          <strong>Roll Number</strong>, classifies <strong>Branch</strong> and <strong>Academic Year</strong>, and assigns to employees.
         </p>
+
+        <div class="form-group margin-bottom-sm">
+          <label for="gformAssignTo"><i class="fa-solid fa-users text-cyan"></i> Assign Imported Students To:</label>
+          <select id="gformAssignTo" class="input-styled w-full">
+            <option value="all" selected>👥 All Employees (Default - Shared across all staff)</option>
+          </select>
+          <span class="form-hint">Every employee will immediately be able to scan and verify attendance for these imported students.</span>
+        </div>
 
         <div class="form-group">
           <label for="gformFileInput"><i class="fa-solid fa-file-arrow-up text-cyan"></i> Option 1: Upload CSV File from Disk</label>
@@ -673,6 +699,13 @@
           <div class="form-group">
             <label for="editStudentYear">Academic Year / Batch *</label>
             <input type="text" id="editStudentYear" class="input-styled" required>
+          </div>
+
+          <div class="form-group">
+            <label for="editStudentAssignedTo"><i class="fa-solid fa-users text-cyan"></i> Assign To Employee / Staff *</label>
+            <select id="editStudentAssignedTo" class="input-styled w-full">
+              <option value="all">👥 All Employees (Shared across all staff)</option>
+            </select>
           </div>
         </div>
         <div class="modal-footer">

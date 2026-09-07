@@ -212,6 +212,24 @@ const ScannerEngine = (() => {
       return;
     }
 
+    // Check if assigned to current employee (if logged in as employee)
+    const currentSession = (typeof AuthManager !== 'undefined') ? AuthManager.getSession() : null;
+    if (currentSession && currentSession.role === 'employee') {
+      const isAssigned = RosterManager.isRollNumberAssigned(rollNo, currentSession.username, currentSession.role);
+      if (!isAssigned) {
+        playSound('error');
+        showResultBanner({
+          type: 'error',
+          title: 'STUDENT NOT ASSIGNED TO YOU',
+          message: `Student "${student.name}" (${rollNo}) is in the university whitelist but assigned to another staff member.`,
+          rollNo: rollNo,
+          student: student
+        });
+        App.showToast(`Access Restricted: Student not assigned to your staff account`, 'error');
+        return;
+      }
+    }
+
     // 2. Check if already marked present today for this session
     if (AttendanceManager.isAlreadyMarked(rollNo, activeSession)) {
       playSound('warning');

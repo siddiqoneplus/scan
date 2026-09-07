@@ -1,0 +1,16 @@
+[
+  {
+    "username": "admin",
+    "password": "admin123",
+    "displayName": "Administrator",
+    "role": "admin",
+    "createdAt": "2026-09-07T19:14:49.154Z"
+  },
+  {
+    "username": "employee",
+    "password": "emp123",
+    "displayName": "Staff Member",
+    "role": "employee",
+    "createdAt": "2026-09-07T19:14:49.155Z"
+  }
+]

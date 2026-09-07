@@ -1,0 +1,79 @@
+[
+  {
+    "rollNo": "24A81A4401",
+    "name": "Aarav Sharma",
+    "branch": "Data Science (DS)",
+    "year": "2024 Batch (3rd Year)",
+    "assignedTo": "all"
+  },
+  {
+    "rollNo": "24A81A6101",
+    "name": "Charan Teja",
+    "branch": "AIML (AI & Machine Learning)",
+    "year": "2024 Batch (3rd Year)",
+    "assignedTo": "all"
+  },
+  {
+    "rollNo": "24A81A4301",
+    "name": "Eshwar Kumar",
+    "branch": "CAI (Computer Science & AI)",
+    "year": "2024 Batch (3rd Year)",
+    "assignedTo": "all"
+  },
+  {
+    "rollNo": "25A81A4402",
+    "name": "Bhavya Sri",
+    "branch": "Data Science (DS)",
+    "year": "2025 Batch (2nd Year)",
+    "assignedTo": "all"
+  },
+  {
+    "rollNo": "25A81A6102",
+    "name": "Divya Reddy",
+    "branch": "AIML (AI & Machine Learning)",
+    "year": "2025 Batch (2nd Year)",
+    "assignedTo": "all"
+  },
+  {
+    "rollNo": "26A81A4403",
+    "name": "Gautam Verma",
+    "branch": "Data Science (DS)",
+    "year": "2026 Batch (1st Year)",
+    "assignedTo": "all"
+  },
+  {
+    "rollNo": "26A81A6103",
+    "name": "Fathima Begum",
+    "branch": "AIML (AI & Machine Learning)",
+    "year": "2026 Batch (1st Year)",
+    "assignedTo": "all"
+  },
+  {
+    "rollNo": "26A81A4303",
+    "name": "Karthik Raja",
+    "branch": "CAI (Computer Science & AI)",
+    "year": "2026 Batch (1st Year)",
+    "assignedTo": "all"
+  },
+  {
+    "rollNo": "23A81A4415",
+    "name": "Harika Nair",
+    "branch": "Data Science (DS)",
+    "year": "2023 Batch (4th Year)",
+    "assignedTo": "all"
+  },
+  {
+    "rollNo": "23A81A6120",
+    "name": "Irfan Pasha",
+    "branch": "AIML (AI & Machine Learning)",
+    "year": "2023 Batch (4th Year)",
+    "assignedTo": "all"
+  },
+  {
+    "rollNo": "23A81A4310",
+    "name": "Jyothi Priya",
+    "branch": "CAI (Computer Science & AI)",
+    "year": "2023 Batch (4th Year)",
+    "assignedTo": "all"
+  }
+]
