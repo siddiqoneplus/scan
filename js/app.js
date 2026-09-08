@@ -524,6 +524,15 @@ const App = (() => {
       if (modalId === 'modalGoogleForm' || modalId === 'modalAddStudent') {
         populateEmployeeDropdowns();
       }
+      if (modalId === 'modalExportPresent') {
+        const todaySpan = document.getElementById('modalExportTodayDate');
+        const sessionSpan = document.getElementById('modalExportActiveSession');
+        if (todaySpan) todaySpan.textContent = AttendanceManager.getTodayDateStr();
+        if (sessionSpan) {
+          const session = document.getElementById('activeSessionSelect')?.value || 'Morning Lecture';
+          sessionSpan.textContent = session;
+        }
+      }
     }
   }
 
@@ -783,6 +792,206 @@ const App = (() => {
     }
   }
 
+  /**
+   * Export the currently filtered attendance logs as a styled PDF report
+   */
+  function exportAttendancePDF() {
+    try {
+      const query = document.getElementById('analyticsSearch')?.value || '';
+      const branch = document.getElementById('analyticsFilterBranch')?.value || 'ALL';
+      const year = document.getElementById('analyticsFilterYear')?.value || 'ALL';
+      const date = document.getElementById('analyticsFilterDate')?.value || '';
+      const activeSession = document.getElementById('activeSessionSelect')?.value || 'Morning Lecture';
+
+      const records = AttendanceManager.getFilteredLogs({
+        query,
+        branch,
+        year,
+        date: date || null
+      });
+
+      if (records.length === 0) {
+        showToast('No attendance records found matching current filters.', 'warning');
+        return;
+      }
+
+      const filterDesc = [
+        branch !== 'ALL' ? branch : null,
+        year !== 'ALL' ? year : null,
+        query ? `Search: "${query}"` : null,
+        date ? date : 'All Dates'
+      ].filter(Boolean).join(' • ') || 'All Filtered Records';
+
+      AttendanceManager.exportPDF(records, {
+        title: 'Present Students Attendance Report',
+        dateStr: date || AttendanceManager.getTodayDateStr(),
+        sessionName: activeSession,
+        filterDesc: filterDesc,
+        uniqueOnly: false,
+        includeSummary: true
+      });
+
+      showToast(`Downloaded PDF report (${records.length} records)!`, 'success');
+    } catch (e) {
+      showToast(e.message, 'warning');
+    }
+  }
+
+  /**
+   * Quick export of today's present students as a clean, deduplicated PDF report
+   */
+  function exportPresentTodayPDF() {
+    try {
+      const today = AttendanceManager.getTodayDateStr();
+      const activeSession = document.getElementById('activeSessionSelect')?.value || 'Morning Lecture';
+      const records = AttendanceManager.getFilteredLogs({ date: today });
+
+      if (records.length === 0) {
+        showToast('No students have checked in as present today yet.', 'warning');
+        return;
+      }
+
+      const uniqueRecords = AttendanceManager.deduplicateRecords(records);
+
+      AttendanceManager.exportPDF(uniqueRecords, {
+        title: "Today's Present Students Report",
+        dateStr: `${today} (Today)`,
+        sessionName: activeSession,
+        filterDesc: 'Today Check-ins (Unique Students)',
+        uniqueOnly: true,
+        includeSummary: true
+      });
+
+      showToast(`Downloaded PDF for ${uniqueRecords.length} present students!`, 'success');
+    } catch (e) {
+      showToast(e.message, 'warning');
+    }
+  }
+
+  /**
+   * Export present students for active session/day from the Admin Roster toolbar
+   */
+  function exportPresentStudentsPDF() {
+    try {
+      const today = AttendanceManager.getTodayDateStr();
+      const activeSession = document.getElementById('activeSessionSelect')?.value || 'Morning Lecture';
+      
+      let records = AttendanceManager.getFilteredLogs({ date: today, session: activeSession });
+      if (records.length === 0) {
+        records = AttendanceManager.getFilteredLogs({ date: today });
+      }
+
+      if (records.length === 0) {
+        showToast('No students are currently marked present for today.', 'warning');
+        return;
+      }
+
+      const uniqueRecords = AttendanceManager.deduplicateRecords(records);
+
+      AttendanceManager.exportPDF(uniqueRecords, {
+        title: `Present Students Report — ${activeSession}`,
+        dateStr: today,
+        sessionName: activeSession,
+        filterDesc: `${activeSession} • Unique Present Attendees`,
+        uniqueOnly: true,
+        includeSummary: true
+      });
+
+      showToast(`Exported ${uniqueRecords.length} present students as PDF!`, 'success');
+    } catch (e) {
+      showToast(e.message, 'warning');
+    }
+  }
+
+  /**
+   * Handle form submission from the Export Present modal
+   */
+  function submitExportPresentModal(event) {
+    if (event) event.preventDefault();
+
+    try {
+      const form = document.getElementById('formExportPresent');
+      const scope = form.elements['exportScope']?.value || 'today';
+      const format = form.elements['exportFormat']?.value || 'pdf';
+      const uniqueOnly = document.getElementById('exportUniqueOnly')?.checked ?? true;
+      const includeSummary = document.getElementById('exportIncludeSummary')?.checked ?? true;
+
+      const today = AttendanceManager.getTodayDateStr();
+      const activeSession = document.getElementById('activeSessionSelect')?.value || 'Morning Lecture';
+
+      let records = [];
+      let title = 'Present Students Attendance Report';
+      let dateStr = today;
+      let filterDesc = 'Custom Report';
+
+      if (scope === 'today') {
+        records = AttendanceManager.getFilteredLogs({ date: today });
+        title = "Today's Present Students Report";
+        filterDesc = `Today (${today}) Check-ins`;
+      } else if (scope === 'session') {
+        records = AttendanceManager.getFilteredLogs({ date: today, session: activeSession });
+        title = `Present Students — ${activeSession}`;
+        filterDesc = `Active Session: ${activeSession} on ${today}`;
+      } else if (scope === 'filtered') {
+        const query = document.getElementById('analyticsSearch')?.value || '';
+        const branch = document.getElementById('analyticsFilterBranch')?.value || 'ALL';
+        const year = document.getElementById('analyticsFilterYear')?.value || 'ALL';
+        const date = document.getElementById('analyticsFilterDate')?.value || '';
+        records = AttendanceManager.getFilteredLogs({ query, branch, year, date: date || null });
+        title = 'Filtered Attendance Records Report';
+        dateStr = date || today;
+        filterDesc = [
+          branch !== 'ALL' ? branch : null,
+          year !== 'ALL' ? year : null,
+          query ? `Search: "${query}"` : null,
+          date ? `Date: ${date}` : 'All Dates'
+        ].filter(Boolean).join(' • ') || 'All Filtered Records';
+      } else {
+        records = AttendanceManager.getAllLogs();
+        title = 'All Historical Attendance Records';
+        dateStr = 'All-Time Records';
+        filterDesc = 'Complete Attendance Archive';
+      }
+
+      if (records.length === 0) {
+        showToast('No records match the selected scope.', 'warning');
+        return;
+      }
+
+      const finalRecords = uniqueOnly ? AttendanceManager.deduplicateRecords(records) : records;
+
+      if (format === 'pdf') {
+        AttendanceManager.exportPDF(finalRecords, {
+          title,
+          dateStr,
+          sessionName: activeSession,
+          filterDesc,
+          uniqueOnly: false, // already deduplicated above if checked
+          includeSummary
+        });
+        showToast(`Downloaded PDF with ${finalRecords.length} present records!`, 'success');
+      } else if (format === 'csv') {
+        AttendanceManager.exportCSV(finalRecords, {
+          uniqueOnly: false,
+          filename: `Present_Students_${scope}_${today}.csv`
+        });
+        showToast(`Exported CSV with ${finalRecords.length} present records!`, 'success');
+      } else if (format === 'print') {
+        AttendanceManager.printReport(finalRecords, {
+          title,
+          dateStr,
+          sessionName: activeSession,
+          uniqueOnly: false
+        });
+        showToast(`Opened print preview for ${finalRecords.length} present records.`, 'info');
+      }
+
+      closeModal('modalExportPresent');
+    } catch (e) {
+      showToast(e.message, 'warning');
+    }
+  }
+
   function bindSimulator() {
     // Quick simulator chip listeners handled inline or via delegate
   }
@@ -919,6 +1128,10 @@ const App = (() => {
     resetRosterToDefault,
     clearAttendanceLogs,
     exportAttendanceCSV,
+    exportAttendancePDF,
+    exportPresentTodayPDF,
+    exportPresentStudentsPDF,
+    submitExportPresentModal,
     showToast,
     refreshAllViews,
     handleLogout,

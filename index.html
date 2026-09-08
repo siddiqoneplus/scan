@@ -22,6 +22,9 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+  <!-- jsPDF & AutoTable for Client-Side PDF Generation -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 </head>
 <body>
 
@@ -111,7 +114,12 @@
 
       <div class="kpi-card">
         <div class="kpi-info">
-          <h3>Present Today</h3>
+          <div class="kpi-header-row">
+            <h3>Present Today</h3>
+            <button class="kpi-mini-btn admin-only-el" onclick="App.exportPresentTodayPDF()" title="Download PDF of Today's Present Students">
+              <i class="fa-solid fa-file-pdf"></i> PDF
+            </button>
+          </div>
           <div class="kpi-number" id="kpiTotalPresent">0</div>
           <div class="kpi-sub">Unique check-ins</div>
         </div>
@@ -331,6 +339,9 @@
           </div>
 
           <div class="flex-btn-group admin-only-el">
+            <button class="btn btn-emerald btn-sm" onclick="App.exportPresentStudentsPDF()" title="Download PDF report of present students">
+              <i class="fa-solid fa-file-pdf"></i> Export Present (PDF)
+            </button>
             <button class="btn btn-secondary btn-sm" onclick="App.openBranchRulesModal()" title="View and customize branch roll number codes">
               <i class="fa-solid fa-sliders"></i> Branch Rules
             </button>
@@ -481,10 +492,16 @@
           </div>
 
           <div class="analytics-actions">
-            <button class="btn btn-primary btn-sm" onclick="App.exportAttendanceCSV()">
-              <i class="fa-solid fa-file-arrow-down"></i> Export to Excel / Sheets
+            <button class="btn btn-emerald btn-sm" id="btnExportAttendancePdf" onclick="App.exportAttendancePDF()" title="Download PDF report of present students">
+              <i class="fa-solid fa-file-pdf"></i> Download PDF
             </button>
-            <button class="btn btn-danger btn-sm" onclick="App.clearAttendanceLogs()">
+            <button class="btn btn-primary btn-sm" id="btnExportAttendanceCsv" onclick="App.exportAttendanceCSV()" title="Export to Excel or Google Sheets">
+              <i class="fa-solid fa-file-excel"></i> Export Excel / CSV
+            </button>
+            <button class="btn btn-secondary btn-sm admin-only-el" onclick="App.openModal('modalExportPresent')" title="Advanced Export & Report Options">
+              <i class="fa-solid fa-sliders"></i> Export Options...
+            </button>
+            <button class="btn btn-danger btn-sm admin-only-el" onclick="App.clearAttendanceLogs()" title="Clear attendance logs">
               <i class="fa-solid fa-trash-can"></i> Clear Logs
             </button>
           </div>
@@ -762,6 +779,93 @@
       <div class="modal-footer">
         <button type="button" class="btn btn-secondary" onclick="App.closeModal('modalBranchRules')">Close</button>
       </div>
+    </div>
+  </div>
+
+  <!-- MODAL: EXPORT PRESENT ATTENDEES (ADMIN ONLY) -->
+  <div class="modal-backdrop" id="modalExportPresent">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3><i class="fa-solid fa-file-export modal-icon-emerald"></i> Export Present Students Report</h3>
+        <button class="btn btn-secondary btn-icon" onclick="App.closeModal('modalExportPresent')">&times;</button>
+      </div>
+      <form id="formExportPresent" onsubmit="App.submitExportPresentModal(event)">
+        <div class="modal-body">
+          <p class="text-muted modal-desc">
+            Generate an official report of attendees marked <strong>Present</strong>. Choose your export scope, format, and de-duplication rules below.
+          </p>
+
+          <div class="form-group">
+            <label class="form-label-bold"><i class="fa-solid fa-filter text-cyan"></i> Attendance Scope</label>
+            <div class="export-scope-options">
+              <label class="radio-card">
+                <input type="radio" name="exportScope" value="today" checked>
+                <div class="radio-card-content">
+                  <div class="radio-card-title"><i class="fa-solid fa-calendar-day text-emerald"></i> Today's Present Students</div>
+                  <div class="radio-card-desc">All students who checked in today (<span id="modalExportTodayDate">Today</span>)</div>
+                </div>
+              </label>
+              <label class="radio-card">
+                <input type="radio" name="exportScope" value="filtered">
+                <div class="radio-card-content">
+                  <div class="radio-card-title"><i class="fa-solid fa-filter text-cyan"></i> Current Filtered View</div>
+                  <div class="radio-card-desc">Respects search, branch, year, & date selected in Analytics table</div>
+                </div>
+              </label>
+              <label class="radio-card">
+                <input type="radio" name="exportScope" value="session">
+                <div class="radio-card-content">
+                  <div class="radio-card-title"><i class="fa-solid fa-clock text-amber"></i> Active Session Only</div>
+                  <div class="radio-card-desc">Students present in current session (<span id="modalExportActiveSession">Session</span>)</div>
+                </div>
+              </label>
+              <label class="radio-card">
+                <input type="radio" name="exportScope" value="all">
+                <div class="radio-card-content">
+                  <div class="radio-card-title"><i class="fa-solid fa-database text-purple"></i> All Time Attendance Logs</div>
+                  <div class="radio-card-desc">Complete historical log of all recorded present check-ins</div>
+                </div>
+              </label>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label-bold"><i class="fa-solid fa-file-lines text-cyan"></i> Export Format</label>
+            <div class="export-format-pills">
+              <label class="pill-radio">
+                <input type="radio" name="exportFormat" value="pdf" checked>
+                <span><i class="fa-solid fa-file-pdf text-crimson"></i> PDF Document (.pdf)</span>
+              </label>
+              <label class="pill-radio">
+                <input type="radio" name="exportFormat" value="csv">
+                <span><i class="fa-solid fa-file-excel text-emerald"></i> Excel / CSV Spreadsheet (.csv)</span>
+              </label>
+              <label class="pill-radio">
+                <input type="radio" name="exportFormat" value="print">
+                <span><i class="fa-solid fa-print text-cyan"></i> Print Preview</span>
+              </label>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label-bold"><i class="fa-solid fa-gears text-cyan"></i> Customization Options</label>
+            <div class="checkbox-options">
+              <label class="checkbox-label">
+                <input type="checkbox" id="exportUniqueOnly" checked>
+                <span><strong>Unique students only</strong> (Excludes duplicate scans of the same student)</span>
+              </label>
+              <label class="checkbox-label">
+                <input type="checkbox" id="exportIncludeSummary" checked>
+                <span>Include institution branding, admin signature block & KPI summary</span>
+              </label>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" onclick="App.closeModal('modalExportPresent')">Cancel</button>
+          <button type="submit" class="btn btn-emerald"><i class="fa-solid fa-download"></i> Generate & Download</button>
+        </div>
+      </form>
     </div>
   </div>
 
