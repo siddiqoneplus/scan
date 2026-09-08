@@ -39,21 +39,7 @@ const RosterManager = (() => {
     'CAI': 'CAI (Computer Science & AI)'
   };
 
-  // Seed data featuring university format (26=1st Year, 25=2nd Year, 24=3rd Year, 23=4th Year)
-  // All assigned to 'all' (All Employees) by default
-  const DEFAULT_STUDENTS = [
-    { rollNo: '24A81A4401', name: 'Aarav Sharma', branch: 'Data Science (DS)', year: '2024 Batch (3rd Year)', assignedTo: 'all' },
-    { rollNo: '24A81A6101', name: 'Charan Teja', branch: 'AIML (AI & Machine Learning)', year: '2024 Batch (3rd Year)', assignedTo: 'all' },
-    { rollNo: '24A81A4301', name: 'Eshwar Kumar', branch: 'CAI (Computer Science & AI)', year: '2024 Batch (3rd Year)', assignedTo: 'all' },
-    { rollNo: '25A81A4402', name: 'Bhavya Sri', branch: 'Data Science (DS)', year: '2025 Batch (2nd Year)', assignedTo: 'all' },
-    { rollNo: '25A81A6102', name: 'Divya Reddy', branch: 'AIML (AI & Machine Learning)', year: '2025 Batch (2nd Year)', assignedTo: 'all' },
-    { rollNo: '26A81A4403', name: 'Gautam Verma', branch: 'Data Science (DS)', year: '2026 Batch (1st Year)', assignedTo: 'all' },
-    { rollNo: '26A81A6103', name: 'Fathima Begum', branch: 'AIML (AI & Machine Learning)', year: '2026 Batch (1st Year)', assignedTo: 'all' },
-    { rollNo: '26A81A4303', name: 'Karthik Raja', branch: 'CAI (Computer Science & AI)', year: '2026 Batch (1st Year)', assignedTo: 'all' },
-    { rollNo: '23A81A4415', name: 'Harika Nair', branch: 'Data Science (DS)', year: '2023 Batch (4th Year)', assignedTo: 'all' },
-    { rollNo: '23A81A6120', name: 'Irfan Pasha', branch: 'AIML (AI & Machine Learning)', year: '2023 Batch (4th Year)', assignedTo: 'all' },
-    { rollNo: '23A81A4310', name: 'Jyothi Priya', branch: 'CAI (Computer Science & AI)', year: '2023 Batch (4th Year)', assignedTo: 'all' }
-  ];
+
 
   let students = [];
   let branchCodes = { ...DEFAULT_BRANCH_CODES };
@@ -64,11 +50,18 @@ const RosterManager = (() => {
   }
 
   function loadStudents() {
+    const demoPurged = localStorage.getItem('smart_attendance_demo_purged_v2');
+    if (!demoPurged) {
+      localStorage.removeItem(STORAGE_KEY);
+      localStorage.setItem('smart_attendance_demo_purged_v2', 'true');
+      students = [];
+    }
+
     const saved = localStorage.getItem(STORAGE_KEY);
     if (saved) {
       try {
         students = JSON.parse(saved);
-        // Automatically re-sync year for students to match latest batch mapping rules (23->4th, 24->3rd, 25->2nd, 26->1st)
+        // Ensure all students have assignedTo and correct year classification
         let updated = false;
         students.forEach(s => {
           if (!s.assignedTo) {
@@ -84,29 +77,17 @@ const RosterManager = (() => {
           }
         });
 
-        // Ensure sample 24A81A4401 is present
-        const hasSample = students.some(s => s.rollNo === '24A81A4401');
-        if (!hasSample) {
-          const existingRolls = new Set(students.map(s => s.rollNo.toUpperCase()));
-          DEFAULT_STUDENTS.forEach(ds => {
-            if (!existingRolls.has(ds.rollNo.toUpperCase())) {
-              students.push(ds);
-            }
-          });
-          updated = true;
-        }
-
         if (updated) {
           saveStudents(false);
         }
       } catch (e) {
         console.error('Failed to parse roster from storage', e);
-        students = [...DEFAULT_STUDENTS];
+        students = [];
         saveStudents(false);
       }
     } else {
-      students = [...DEFAULT_STUDENTS];
-      saveStudents(false);
+      // No local data — start empty, will be populated from server sync
+      students = [];
     }
 
     const savedRules = localStorage.getItem(RULES_KEY);
@@ -129,13 +110,18 @@ const RosterManager = (() => {
       const response = await fetch('/api/roster');
       if (response.ok) {
         const data = await response.json();
-        if (data.success && Array.isArray(data.students) && data.students.length > 0) {
-          students = data.students.map(s => ({
+        if (data.success && Array.isArray(data.students)) {
+          const newStudents = data.students.map(s => ({
             ...s,
             assignedTo: s.assignedTo || 'all'
           }));
-          localStorage.setItem(STORAGE_KEY, JSON.stringify(students));
-          window.dispatchEvent(new CustomEvent('roster:updated', { detail: { count: students.length } }));
+          const currentStr = JSON.stringify(students);
+          const newStr = JSON.stringify(newStudents);
+          if (currentStr !== newStr) {
+            students = newStudents;
+            localStorage.setItem(STORAGE_KEY, newStr);
+            window.dispatchEvent(new CustomEvent('roster:updated', { detail: { count: students.length } }));
+          }
         }
       }
     } catch (e) {
@@ -444,7 +430,7 @@ const RosterManager = (() => {
   }
 
   function resetToDefault() {
-    students = [...DEFAULT_STUDENTS];
+    students = [];
     saveStudents(true);
     return students;
   }

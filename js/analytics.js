@@ -16,6 +16,13 @@ const AttendanceManager = (() => {
   }
 
   function loadLogs() {
+    const demoLogsPurged = localStorage.getItem('smart_attendance_logs_purged_v2');
+    if (!demoLogsPurged) {
+      localStorage.removeItem(STORAGE_KEY);
+      localStorage.setItem('smart_attendance_logs_purged_v2', 'true');
+      logs = [];
+    }
+
     const saved = localStorage.getItem(STORAGE_KEY);
     if (saved) {
       try {
@@ -50,9 +57,13 @@ const AttendanceManager = (() => {
       if (response.ok) {
         const data = await response.json();
         if (data.success && Array.isArray(data.logs)) {
-          logs = data.logs;
-          localStorage.setItem(STORAGE_KEY, JSON.stringify(logs));
-          window.dispatchEvent(new CustomEvent('attendance:updated', { detail: { count: logs.length } }));
+          const currentStr = JSON.stringify(logs);
+          const newStr = JSON.stringify(data.logs);
+          if (currentStr !== newStr) {
+            logs = data.logs;
+            localStorage.setItem(STORAGE_KEY, newStr);
+            window.dispatchEvent(new CustomEvent('attendance:updated', { detail: { count: logs.length } }));
+          }
         }
       }
     } catch (e) {

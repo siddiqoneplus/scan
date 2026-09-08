@@ -112,6 +112,25 @@ const server = http.createServer(async (req, res) => {
         await db.saveStudents(normalized);
         return sendJson(res, 200, { success: true, count: normalized.length, students: normalized });
       }
+
+      // DELETE: Clear ALL students from DB + local JSON
+      if (req.method === 'DELETE') {
+        await db.saveStudents([]);
+        return sendJson(res, 200, { success: true, message: 'All students cleared', count: 0 });
+      }
+    }
+
+    // 1b. DELETE INDIVIDUAL STUDENT
+    if (reqPath === '/api/roster/student' && req.method === 'DELETE') {
+      const body = await parseBody(req);
+      const rollNo = body.rollNo || params.get('rollNo');
+      if (!rollNo) {
+        return sendJson(res, 400, { success: false, error: 'rollNo is required' });
+      }
+      const current = await db.getStudents();
+      const filtered = current.filter(s => s.rollNo.toUpperCase() !== rollNo.toUpperCase());
+      await db.saveStudents(filtered);
+      return sendJson(res, 200, { success: true, removed: rollNo, remaining: filtered.length });
     }
 
     // 2. ROSTER IMPORT API

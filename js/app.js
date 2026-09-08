@@ -63,12 +63,23 @@ const App = (() => {
       AttendanceManager.renderCharts();
     });
 
-    // Background sync from server every 10 seconds to keep all employees & admins in sync
+    // Cross-tab real-time storage event synchronization
+    window.addEventListener('storage', (e) => {
+      if (e.key === 'smart_attendance_roster') {
+        RosterManager.loadStudents();
+        refreshAllViews();
+      } else if (e.key === 'smart_attendance_logs') {
+        AttendanceManager.loadLogs();
+        refreshAllViews();
+      }
+    });
+
+    // Background sync from server every 5 seconds to keep all employees & admins in sync
     setInterval(() => {
       RosterManager.syncFromServer();
       AttendanceManager.syncFromServer();
       checkDatabaseStatus();
-    }, 10000);
+    }, 5000);
 
     // Check MongoDB Atlas / Local database status
     checkDatabaseStatus();
@@ -273,6 +284,15 @@ const App = (() => {
     if (!container) return;
 
     const students = RosterManager.getAllStudents().slice(0, 7);
+    if (students.length === 0) {
+      container.innerHTML = `
+        <span class="text-subtle text-sm" style="font-style: italic; opacity: 0.75; padding: 0.25rem 0.5rem;">
+          No students in whitelist yet. Add students or import a CSV in the Roster tab to enable quick test scans.
+        </span>
+      `;
+      return;
+    }
+
     let html = students.map(s => {
       const branchAbbr = s.branch.split('(')[1]?.replace(')', '') || s.branch.split(' ')[0];
       return `
@@ -379,8 +399,9 @@ const App = (() => {
     if (students.length === 0) {
       tbody.innerHTML = `
         <tr>
-          <td colspan="8" class="empty-placeholder">
-            No student records found matching the criteria.
+          <td colspan="8" class="empty-placeholder" style="padding: 2.5rem 1rem; text-align: center;">
+            <i class="fa-solid fa-folder-open" style="font-size: 2rem; opacity: 0.35; display: block; margin-bottom: 0.6rem;"></i>
+            No student records found in whitelist. Use <strong>"Add Student"</strong> or <strong>"Import CSV"</strong> above to register students.
           </td>
         </tr>
       `;
@@ -762,9 +783,10 @@ const App = (() => {
   }
 
   function resetRosterToDefault() {
-    if (confirm('Reset student roster to default university demo list?')) {
-      RosterManager.resetToDefault();
-      showToast('Roster reset to default dataset', 'success');
+    if (confirm('Are you sure you want to clear all students from the whitelist?')) {
+      RosterManager.clearAll();
+      showToast('Student whitelist cleared', 'info');
+      refreshAllViews();
     }
   }
 

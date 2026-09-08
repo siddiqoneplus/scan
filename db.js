@@ -15,20 +15,7 @@ if (!fs.existsSync(DATA_DIR)) {
   fs.mkdirSync(DATA_DIR, { recursive: true });
 }
 
-// Default Seed Data
-const DEFAULT_STUDENTS = [
-  { rollNo: '24A81A4401', name: 'Aarav Sharma', branch: 'Data Science (DS)', year: '2024 Batch (3rd Year)', assignedTo: 'all' },
-  { rollNo: '24A81A6101', name: 'Charan Teja', branch: 'AIML (AI & Machine Learning)', year: '2024 Batch (3rd Year)', assignedTo: 'all' },
-  { rollNo: '24A81A4301', name: 'Eshwar Kumar', branch: 'CAI (Computer Science & AI)', year: '2024 Batch (3rd Year)', assignedTo: 'all' },
-  { rollNo: '25A81A4402', name: 'Bhavya Sri', branch: 'Data Science (DS)', year: '2025 Batch (2nd Year)', assignedTo: 'all' },
-  { rollNo: '25A81A6102', name: 'Divya Reddy', branch: 'AIML (AI & Machine Learning)', year: '2025 Batch (2nd Year)', assignedTo: 'all' },
-  { rollNo: '26A81A4403', name: 'Gautam Verma', branch: 'Data Science (DS)', year: '2026 Batch (1st Year)', assignedTo: 'all' },
-  { rollNo: '26A81A6103', name: 'Fathima Begum', branch: 'AIML (AI & Machine Learning)', year: '2026 Batch (1st Year)', assignedTo: 'all' },
-  { rollNo: '26A81A4303', name: 'Karthik Raja', branch: 'CAI (Computer Science & AI)', year: '2026 Batch (1st Year)', assignedTo: 'all' },
-  { rollNo: '23A81A4415', name: 'Harika Nair', branch: 'Data Science (DS)', year: '2023 Batch (4th Year)', assignedTo: 'all' },
-  { rollNo: '23A81A6120', name: 'Irfan Pasha', branch: 'AIML (AI & Machine Learning)', year: '2023 Batch (4th Year)', assignedTo: 'all' },
-  { rollNo: '23A81A4310', name: 'Jyothi Priya', branch: 'CAI (Computer Science & AI)', year: '2023 Batch (4th Year)', assignedTo: 'all' }
-];
+// No demo data — roster starts empty and is populated only by admin actions
 
 const DEFAULT_ACCOUNTS = [
   {
@@ -84,7 +71,7 @@ function writeJsonFile(filename, data) {
 }
 
 // Initialize seed data in local JSON files
-readJsonFile('roster.json', DEFAULT_STUDENTS);
+readJsonFile('roster.json', []);
 readJsonFile('accounts.json', DEFAULT_ACCOUNTS);
 readJsonFile('attendance.json', []);
 readJsonFile('rules.json', {});
@@ -157,22 +144,7 @@ async function createIndexes() {
 async function seedAtlasIfEmpty() {
   if (!isConnected || !db) return;
   try {
-    // 1. Seed Students from local JSON or defaults
-    const studentsCol = db.collection('students');
-    const studentCount = await studentsCol.countDocuments();
-    if (studentCount === 0) {
-      const localStudents = readJsonFile('roster.json', DEFAULT_STUDENTS);
-      if (localStudents.length > 0) {
-        await studentsCol.insertMany(localStudents.map(s => ({
-          rollNo: s.rollNo.toUpperCase(),
-          name: s.name,
-          branch: s.branch,
-          year: s.year,
-          assignedTo: s.assignedTo || 'all'
-        })));
-        console.log(`[MongoDB Atlas] Seeded ${localStudents.length} students into "students" collection.`);
-      }
-    }
+    // Students are NOT auto-seeded — only admin-added data is persisted
 
     // 2. Seed Accounts
     const accountsCol = db.collection('accounts');
@@ -228,7 +200,7 @@ async function getStudents() {
       console.warn('[MongoDB Atlas] Read error, falling back to local JSON:', err.message);
     }
   }
-  return readJsonFile('roster.json', DEFAULT_STUDENTS);
+  return readJsonFile('roster.json', []);
 }
 
 async function saveStudents(studentsList) {
