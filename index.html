@@ -75,6 +75,12 @@
         <i class="fa-solid fa-volume-high"></i>
       </button>
 
+      <!-- Database Connection Status Badge -->
+      <div class="db-status-pill" id="dbStatusPill" onclick="App.openDatabaseModal()" title="Database Connection Status (Click to configure MongoDB Atlas)">
+        <span class="db-status-dot local" id="dbStatusDot"></span>
+        <span class="db-status-label" id="dbStatusText">Local Storage</span>
+      </div>
+
       <!-- User Info & Logout -->
       <div class="user-info-pill" id="userInfoPill" title="Logged in user">
         <div class="user-avatar" id="userAvatar">
@@ -85,6 +91,10 @@
           <span class="user-role-badge" id="headerUserRole">role</span>
         </div>
       </div>
+
+      <button id="btnDatabaseConfig" class="btn btn-secondary btn-icon admin-only-el" onclick="App.openDatabaseModal()" title="MongoDB Atlas Settings">
+        <i class="fa-solid fa-database"></i>
+      </button>
 
       <button id="btnManageAccounts" class="btn btn-secondary btn-icon admin-only-el" onclick="App.openModal('modalManageAccounts')" title="Manage Accounts">
         <i class="fa-solid fa-users-gear"></i>
@@ -864,6 +874,86 @@
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary" onclick="App.closeModal('modalExportPresent')">Cancel</button>
           <button type="submit" class="btn btn-emerald"><i class="fa-solid fa-download"></i> Generate & Download</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: MONGODB ATLAS DATABASE CONFIGURATION -->
+  <div class="modal-backdrop" id="modalDatabase">
+    <div class="modal-box modal-lg">
+      <div class="modal-header">
+        <h3><i class="fa-solid fa-database modal-icon-cyan"></i> MongoDB Atlas Database Connection</h3>
+        <button class="btn btn-secondary btn-icon" onclick="App.closeModal('modalDatabase')">&times;</button>
+      </div>
+      <form id="formDatabaseConfig" onsubmit="App.submitDatabaseConfig(event)">
+        <div class="modal-body">
+          <!-- Current Live DB Status Banner -->
+          <div class="db-status-banner" id="dbStatusBanner">
+            <div class="db-status-icon-box" id="dbStatusIconBox">
+              <i class="fa-solid fa-server"></i>
+            </div>
+            <div class="db-status-info">
+              <div class="db-status-title-row">
+                <h4 id="dbStatusTitle">Checking Database Connection...</h4>
+                <span class="tag tag-session" id="dbModeBadge">LOCAL MODE</span>
+              </div>
+              <p class="db-status-detail" id="dbStatusDetail">Running on local JSON file storage (./data).</p>
+            </div>
+          </div>
+
+          <!-- Quick Setup Guide Details -->
+          <details class="db-guide-details" open>
+            <summary class="db-guide-summary"><i class="fa-solid fa-circle-question text-cyan"></i> How to connect your free MongoDB Atlas cluster</summary>
+            <div class="db-guide-steps">
+              <div class="db-step">
+                <span class="step-num">1</span>
+                <div>Sign in to <strong><a href="https://cloud.mongodb.com" target="_blank" rel="noopener noreferrer" class="link-cyan">MongoDB Atlas</a></strong> and create or select your Cluster.</div>
+              </div>
+              <div class="db-step">
+                <span class="step-num">2</span>
+                <div>In <strong>Security &rarr; Database Access</strong>, create a database user with a password.</div>
+              </div>
+              <div class="db-step">
+                <span class="step-num">3</span>
+                <div>In <strong>Security &rarr; Network Access</strong>, add IP Address <code>0.0.0.0/0</code> (Allow Access from Anywhere).</div>
+              </div>
+              <div class="db-step">
+                <span class="step-num">4</span>
+                <div>Click <strong>Connect &rarr; Drivers (Node.js)</strong> &rarr; copy the connection string and paste it below.</div>
+              </div>
+            </div>
+          </details>
+
+          <!-- Configuration Form Fields -->
+          <div class="form-group margin-top-sm">
+            <label for="inputMongoUri"><i class="fa-solid fa-link text-cyan"></i> MongoDB Connection URI String *</label>
+            <div class="input-with-icon">
+              <input type="password" id="inputMongoUri" class="input-styled w-full" placeholder="mongodb+srv://<username>:<password>@cluster0.abcde.mongodb.net/smart_attendance?retryWrites=true&w=majority" required autocomplete="off">
+              <button type="button" class="btn-input-icon" onclick="App.toggleDbUriVisibility()" title="Toggle URI visibility">
+                <i class="fa-solid fa-eye" id="toggleUriIcon"></i>
+              </button>
+            </div>
+            <span class="form-hint">Replace &lt;username&gt; and &lt;password&gt; with your actual database credentials.</span>
+          </div>
+
+          <div class="form-group">
+            <label for="inputDbName"><i class="fa-solid fa-folder-tree text-cyan"></i> Database Name</label>
+            <input type="text" id="inputDbName" class="input-styled" value="smart_attendance" placeholder="smart_attendance">
+            <span class="form-hint">Collections (<code>students</code>, <code>attendance</code>, <code>accounts</code>, <code>rules</code>) will sync here automatically.</span>
+          </div>
+
+          <!-- Connection Test Feedback Area -->
+          <div id="dbTestFeedback" class="db-test-feedback hidden"></div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" onclick="App.testDatabaseConnection()">
+            <i class="fa-solid fa-bolt"></i> Test Connection
+          </button>
+          <button type="button" class="btn btn-secondary" onclick="App.closeModal('modalDatabase')">Close</button>
+          <button type="submit" class="btn btn-primary">
+            <i class="fa-solid fa-cloud-arrow-up"></i> Save & Connect to Atlas
+          </button>
         </div>
       </form>
     </div>

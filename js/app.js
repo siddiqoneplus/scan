@@ -67,7 +67,11 @@ const App = (() => {
     setInterval(() => {
       RosterManager.syncFromServer();
       AttendanceManager.syncFromServer();
+      checkDatabaseStatus();
     }, 10000);
+
+    // Check MongoDB Atlas / Local database status
+    checkDatabaseStatus();
   }
 
   /**
@@ -1103,6 +1107,159 @@ const App = (() => {
     `).join('');
   }
 
+  /**
+   * Fetch and update the MongoDB Atlas / Local Storage connection badge
+   */
+  async function checkDatabaseStatus() {
+    try {
+      const res = await fetch('/api/db/status');
+      if (!res.ok) return;
+      const data = await res.json();
+      if (!data.success || !data.db) return;
+
+      const dot = document.getElementById('dbStatusDot');
+      const text = document.getElementById('dbStatusText');
+      const pill = document.getElementById('dbStatusPill');
+
+      if (data.db.connected) {
+        if (dot) dot.className = 'db-status-dot atlas';
+        if (text) text.textContent = 'MongoDB Atlas';
+        if (pill) pill.title = `Connected to MongoDB Atlas (${data.db.dbName}) • Click to configure`;
+      } else if (data.db.uriConfigured) {
+        if (dot) dot.className = 'db-status-dot error';
+        if (text) text.textContent = 'Atlas Error';
+        if (pill) pill.title = `MongoDB Atlas error: ${data.db.lastError} • Click to configure`;
+      } else {
+        if (dot) dot.className = 'db-status-dot local';
+        if (text) text.textContent = 'Local Storage';
+        if (pill) pill.title = `Running on Local Storage (Click to connect MongoDB Atlas)`;
+      }
+
+      renderDatabaseModalBanner(data.db);
+    } catch (e) {
+      // Offline fallback
+    }
+  }
+
+  function renderDatabaseModalBanner(dbStatus) {
+    const banner = document.getElementById('dbStatusBanner');
+    const title = document.getElementById('dbStatusTitle');
+    const badge = document.getElementById('dbModeBadge');
+    const detail = document.getElementById('dbStatusDetail');
+
+    if (!banner || !title || !badge || !detail) return;
+
+    if (dbStatus.connected) {
+      banner.className = 'db-status-banner atlas';
+      title.textContent = `Connected to MongoDB Atlas Cloud`;
+      badge.textContent = 'ATLAS ACTIVE';
+      badge.className = 'tag tag-present';
+      detail.textContent = `Cluster database "${dbStatus.dbName}" is active. Total: ${dbStatus.counts.students} students, ${dbStatus.counts.attendance} attendance records.`;
+    } else {
+      banner.className = 'db-status-banner';
+      title.textContent = dbStatus.uriConfigured ? 'Connection Failed (Using Local Storage)' : 'Local JSON Storage Active';
+      badge.textContent = 'LOCAL MODE';
+      badge.className = 'tag tag-session';
+      detail.textContent = dbStatus.uriConfigured
+        ? `Error connecting to Atlas: ${dbStatus.lastError || 'Unreachable'}. App is safely using local files.`
+        : 'App is currently persisting data to local files in ./data. Connect MongoDB Atlas to sync across devices.';
+    }
+  }
+
+  function openDatabaseModal() {
+    openModal('modalDatabase');
+    checkDatabaseStatus();
+  }
+
+  function toggleDbUriVisibility() {
+    const input = document.getElementById('inputMongoUri');
+    const icon = document.getElementById('toggleUriIcon');
+    if (!input || !icon) return;
+    if (input.type === 'password') {
+      input.type = 'text';
+      icon.className = 'fa-solid fa-eye-slash';
+    } else {
+      input.type = 'password';
+      icon.className = 'fa-solid fa-eye';
+    }
+  }
+
+  async function testDatabaseConnection() {
+    const input = document.getElementById('inputMongoUri');
+    const feedback = document.getElementById('dbTestFeedback');
+    const uri = input?.value?.trim();
+
+    if (!uri) {
+      showToast('Please enter a MongoDB connection URI to test.', 'warning');
+      return;
+    }
+
+    if (feedback) {
+      feedback.className = 'db-test-feedback';
+      feedback.style.display = 'block';
+      feedback.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Testing connection to MongoDB Atlas...';
+    }
+
+    try {
+      const res = await fetch('/api/db/test', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ uri })
+      });
+      const data = await res.json();
+
+      if (data.success) {
+        feedback.className = 'db-test-feedback success';
+        feedback.innerHTML = `<i class="fa-solid fa-circle-check"></i> ${escapeHtml(data.message || 'Connection successful!')}`;
+        showToast('MongoDB Atlas connection verified!', 'success');
+      } else {
+        feedback.className = 'db-test-feedback error';
+        feedback.innerHTML = `<i class="fa-solid fa-circle-xmark"></i> Connection Failed: ${escapeHtml(data.error || 'Check username, password, and IP whitelist.')}`;
+        showToast('MongoDB connection failed. See details.', 'error');
+      }
+    } catch (e) {
+      if (feedback) {
+        feedback.className = 'db-test-feedback error';
+        feedback.innerHTML = `<i class="fa-solid fa-circle-xmark"></i> Network test error: ${escapeHtml(e.message)}`;
+      }
+    }
+  }
+
+  async function submitDatabaseConfig(event) {
+    if (event) event.preventDefault();
+    const uri = document.getElementById('inputMongoUri')?.value?.trim();
+    const dbName = document.getElementById('inputDbName')?.value?.trim() || 'smart_attendance';
+
+    if (!uri) {
+      showToast('MongoDB URI string is required.', 'warning');
+      return;
+    }
+
+    showToast('Connecting to MongoDB Atlas...', 'info');
+
+    try {
+      const res = await fetch('/api/db/configure', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ uri, dbName })
+      });
+      const data = await res.json();
+
+      if (data.success && data.db.connected) {
+        showToast('Connected to MongoDB Atlas! Cloud sync active.', 'success');
+        checkDatabaseStatus();
+        RosterManager.syncFromServer();
+        AttendanceManager.syncFromServer();
+        closeModal('modalDatabase');
+      } else {
+        showToast(`Could not connect: ${data.db?.lastError || 'Invalid credentials or network access'}`, 'error');
+        checkDatabaseStatus();
+      }
+    } catch (e) {
+      showToast(`Error: ${e.message}`, 'error');
+    }
+  }
+
   return {
     init,
     switchTab,
@@ -1110,6 +1267,11 @@ const App = (() => {
     handleManualSubmit,
     openModal,
     closeModal,
+    openDatabaseModal,
+    toggleDbUriVisibility,
+    testDatabaseConnection,
+    submitDatabaseConfig,
+    checkDatabaseStatus,
     submitAddStudent,
     openEditStudentModal,
     submitEditStudent,
