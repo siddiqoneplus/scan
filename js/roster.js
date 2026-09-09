@@ -50,13 +50,6 @@ const RosterManager = (() => {
   }
 
   function loadStudents() {
-    const demoPurged = localStorage.getItem('smart_attendance_demo_purged_v2');
-    if (!demoPurged) {
-      localStorage.removeItem(STORAGE_KEY);
-      localStorage.setItem('smart_attendance_demo_purged_v2', 'true');
-      students = [];
-    }
-
     const saved = localStorage.getItem(STORAGE_KEY);
     if (saved) {
       try {

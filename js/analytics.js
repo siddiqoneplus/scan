@@ -16,13 +16,6 @@ const AttendanceManager = (() => {
   }
 
   function loadLogs() {
-    const demoLogsPurged = localStorage.getItem('smart_attendance_logs_purged_v2');
-    if (!demoLogsPurged) {
-      localStorage.removeItem(STORAGE_KEY);
-      localStorage.setItem('smart_attendance_logs_purged_v2', 'true');
-      logs = [];
-    }
-
     const saved = localStorage.getItem(STORAGE_KEY);
     if (saved) {
       try {
