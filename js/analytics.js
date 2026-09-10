@@ -7,6 +7,8 @@
 const AttendanceManager = (() => {
   const STORAGE_KEY = 'smart_attendance_logs';
   let logs = [];
+  let isClearing = false;
+  let syncAbortController = null;
   let branchChartInstance = null;
   let yearChartInstance = null;
 
@@ -45,10 +47,17 @@ const AttendanceManager = (() => {
    * Fetch logs from centralized backend server (Smart Non-Destructive Merge)
    */
   async function syncFromServer() {
+    if (isClearing) return;
     try {
-      const response = await fetch('/api/attendance');
+      if (syncAbortController) {
+        try { syncAbortController.abort(); } catch (e) {}
+      }
+      syncAbortController = new AbortController();
+      const response = await fetch('/api/attendance', { signal: syncAbortController.signal });
+      if (isClearing) return;
       if (response.ok) {
         const data = await response.json();
+        if (isClearing) return;
         if (data.success && Array.isArray(data.logs)) {
           // If server was intentionally cleared (0 logs), synchronize local state to 0
           if (data.logs.length === 0) {
@@ -99,13 +108,13 @@ const AttendanceManager = (() => {
           }
 
           // If there were local logs that server didn't have, push them up!
-          if (hadUnsynced) {
+          if (hadUnsynced && !isClearing) {
             saveLogs(true);
           }
         }
       }
     } catch (e) {
-      // Offline fallback: use local logs safely
+      // Offline fallback or aborted
     }
   }
 
@@ -228,18 +237,25 @@ const AttendanceManager = (() => {
    * Clear all records
    */
   async function clearAllLogs() {
+    isClearing = true;
+    if (syncAbortController) {
+      try { syncAbortController.abort(); } catch (e) {}
+    }
     logs = [];
     localStorage.setItem(STORAGE_KEY, '[]');
+    localStorage.setItem('smart_attendance_logs_cleared', Date.now().toString());
     window.dispatchEvent(new CustomEvent('attendance:updated', { detail: { count: 0 } }));
 
     try {
-      await fetch('/api/attendance', {
+      await fetch('/api/attendance?id=all', {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id: 'all' })
       });
     } catch (err) {
       console.warn('Could not clear logs on server:', err);
+    } finally {
+      setTimeout(() => { isClearing = false; }, 1500);
     }
     return [];
   }
@@ -802,6 +818,7 @@ const AttendanceManager = (() => {
 
   return {
     init,
+    loadLogs,
     syncFromServer,
     getAllLogs: () => [...logs],
     getFilteredLogs,

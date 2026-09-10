@@ -157,16 +157,7 @@ async function seedAtlasIfEmpty() {
       }
     }
 
-    // 3. Seed Attendance Logs
-    const attendanceCol = db.collection('attendance');
-    const attendanceCount = await attendanceCol.countDocuments();
-    if (attendanceCount === 0) {
-      const localLogs = readJsonFile('attendance.json', []);
-      if (localLogs.length > 0) {
-        await attendanceCol.insertMany(localLogs);
-        console.log(`[MongoDB Atlas] Migrated ${localLogs.length} attendance logs into "attendance" collection.`);
-      }
-    }
+    // 3. Attendance logs are operational data and are NEVER auto-seeded
 
     // 4. Seed Rules
     const rulesCol = db.collection('rules');
@@ -379,10 +370,14 @@ async function addAttendanceRecord(record) {
 }
 
 async function deleteAttendanceRecord(recordId) {
-  if (recordId === 'all') {
+  if (recordId === 'all' || !recordId) {
     writeJsonFile('attendance.json', []);
     if (isConnected && db) {
-      try { await db.collection('attendance').deleteMany({}); } catch (e) {}
+      try {
+        await db.collection('attendance').deleteMany({});
+      } catch (e) {
+        console.warn('[MongoDB Atlas] Clear attendance error:', e.message);
+      }
     }
     return { count: 0, message: 'All logs cleared' };
   }
@@ -397,6 +392,24 @@ async function deleteAttendanceRecord(recordId) {
     } catch (e) {}
   }
   return { count: logs.length, message: 'Record deleted' };
+}
+
+async function clearAllSystemData() {
+  // Wipe roster and attendance locally
+  writeJsonFile('roster.json', []);
+  writeJsonFile('attendance.json', []);
+
+  // Wipe roster and attendance in MongoDB Atlas permanently
+  if (isConnected && db) {
+    try {
+      await db.collection('students').deleteMany({});
+      await db.collection('attendance').deleteMany({});
+      console.log('[MongoDB Atlas] All students and attendance permanently cleared.');
+    } catch (err) {
+      console.warn('[MongoDB Atlas] Clear all data note:', err.message);
+    }
+  }
+  return { count: 0, message: 'All system data permanently cleared' };
 }
 
 // --- ACCOUNTS ---
@@ -562,6 +575,7 @@ module.exports = {
   saveAttendance,
   addAttendanceRecord,
   deleteAttendanceRecord,
+  clearAllSystemData,
   getAccounts,
   saveAccounts,
   getRules,

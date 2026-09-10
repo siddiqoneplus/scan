@@ -43,6 +43,8 @@ const RosterManager = (() => {
 
   let students = [];
   let branchCodes = { ...DEFAULT_BRANCH_CODES };
+  let isClearing = false;
+  let syncAbortController = null;
 
   function init() {
     loadStudents();
@@ -99,10 +101,17 @@ const RosterManager = (() => {
    * Sync roster data with centralized backend server (Smart Non-Destructive Merge)
    */
   async function syncFromServer() {
+    if (isClearing) return;
     try {
-      const response = await fetch('/api/roster');
+      if (syncAbortController) {
+        try { syncAbortController.abort(); } catch (e) {}
+      }
+      syncAbortController = new AbortController();
+      const response = await fetch('/api/roster', { signal: syncAbortController.signal });
+      if (isClearing) return;
       if (response.ok) {
         const data = await response.json();
+        if (isClearing) return;
         if (data.success && Array.isArray(data.students)) {
           // If server was intentionally cleared (0 students), synchronize local state to 0
           if (data.students.length === 0) {
@@ -155,13 +164,13 @@ const RosterManager = (() => {
             window.dispatchEvent(new CustomEvent('roster:updated', { detail: { count: students.length } }));
           }
 
-          if (hadUnsynced) {
+          if (hadUnsynced && !isClearing) {
             saveStudents(true);
           }
         }
       }
     } catch (e) {
-      // Offline mode: proceed with localStorage
+      // Offline mode or aborted: proceed with localStorage
     }
   }
 
@@ -484,8 +493,13 @@ const RosterManager = (() => {
   }
 
   async function clearAll() {
+    isClearing = true;
+    if (syncAbortController) {
+      try { syncAbortController.abort(); } catch (e) {}
+    }
     students = [];
     localStorage.setItem(STORAGE_KEY, '[]');
+    localStorage.setItem('smart_attendance_roster_cleared', Date.now().toString());
     window.dispatchEvent(new CustomEvent('roster:updated', { detail: { count: 0 } }));
 
     try {
@@ -495,6 +509,9 @@ const RosterManager = (() => {
       });
     } catch (err) {
       console.warn('Could not clear roster on server:', err);
+    } finally {
+      // Hold lock briefly to let background intervals settle
+      setTimeout(() => { isClearing = false; }, 1500);
     }
     return [];
   }
@@ -573,6 +590,7 @@ const RosterManager = (() => {
 
   return {
     init,
+    loadStudents,
     syncFromServer,
     getAllStudents: () => [...students],
     getStudentsForUser,

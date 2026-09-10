@@ -65,12 +65,16 @@ const App = (() => {
 
     // Cross-tab real-time storage event synchronization
     window.addEventListener('storage', (e) => {
-      if (e.key === 'smart_attendance_roster') {
-        RosterManager.loadStudents();
-        refreshAllViews();
-      } else if (e.key === 'smart_attendance_logs') {
-        AttendanceManager.loadLogs();
-        refreshAllViews();
+      try {
+        if (e.key === 'smart_attendance_roster' || e.key === 'smart_attendance_roster_cleared') {
+          if (typeof RosterManager.loadStudents === 'function') RosterManager.loadStudents();
+          refreshAllViews();
+        } else if (e.key === 'smart_attendance_logs' || e.key === 'smart_attendance_logs_cleared') {
+          if (typeof AttendanceManager.loadLogs === 'function') AttendanceManager.loadLogs();
+          refreshAllViews();
+        }
+      } catch (err) {
+        console.warn('Cross-tab sync note:', err);
       }
     });
 
@@ -703,30 +707,33 @@ const App = (() => {
     }
   }
 
-  async function clearAllStudents() {
-    const confirmed = confirm(
-      '⚠️ WARNING: CLEAR WHITELIST & RESET ALL DATA?\n\n' +
-      'This will erase the complete system data permanently:\n' +
-      ' • Registered Students Whitelist (0 students)\n' +
-      ' • Present Today check-ins (0 present)\n' +
-      ' • Attendance Rate (0%)\n' +
-      ' • Total Scans Logged (0 scans)\n' +
-      ' • All logs from Cloud Database (MongoDB Atlas) & Local Files\n\n' +
-      'Are you sure you want to erase everything?'
-    );
+  function confirmClearAllStudents() {
+    openModal('modalClearWhitelist');
+  }
 
-    if (!confirmed) return;
+  async function executePermanentClear() {
+    closeModal('modalClearWhitelist');
 
     try {
-      showToast('Erasing whitelist and clearing all attendance data...', 'info');
+      showToast('Permanently erasing whitelist and clearing all attendance data...', 'info');
 
-      // 1. Clear students roster locally & on server
+      // 1. Call dedicated atomic backend purge to wipe MongoDB Atlas and local JSON files
+      try {
+        await fetch('/api/admin/clear-all', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' }
+        });
+      } catch (e) {
+        console.warn('Backend clear-all endpoint note:', e);
+      }
+
+      // 2. Clear students roster locally & on server
       await RosterManager.clearAll();
 
-      // 2. Clear attendance logs locally & on server
+      // 3. Clear attendance logs locally & on server
       await AttendanceManager.clearAllLogs();
 
-      // 3. Reset scan result banner
+      // 4. Reset scan result banner
       const banner = document.getElementById('scanResultBanner');
       if (banner) {
         banner.style.display = 'none';
@@ -734,15 +741,20 @@ const App = (() => {
         banner.className = 'result-banner';
       }
 
-      // 4. Force update all KPI cards and views to 0
+      // 5. Force update all KPI cards and views to 0
       refreshAllViews();
 
-      showToast('Complete data erased: Registered Students, Present Today, Attendance Rate, and Total Scans have been reset to 0.', 'success');
+      showToast('Complete data permanently erased: Registered Students, Present Today, Attendance Rate, and Total Scans have been reset to 0.', 'success');
     } catch (err) {
       console.error('Error clearing data:', err);
       showToast('Error during clear: ' + err.message, 'error');
       refreshAllViews();
     }
+  }
+
+  // Backwards compatibility alias
+  async function clearAllStudents() {
+    confirmClearAllStudents();
   }
 
   function handleGoogleFormFileUpload(file) {
@@ -1356,6 +1368,8 @@ const App = (() => {
     submitEditStudent,
     toggleStudentAttendance,
     exportRosterCSV,
+    confirmClearAllStudents,
+    executePermanentClear,
     clearAllStudents,
     handleGoogleFormFileUpload,
     openBranchRulesModal,

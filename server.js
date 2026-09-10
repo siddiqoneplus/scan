@@ -178,15 +178,17 @@ const server = http.createServer(async (req, res) => {
 
       if (req.method === 'DELETE') {
         const body = await parseBody(req);
-        const recordId = body.id || params.get('id');
-
-        if (!recordId) {
-          return sendJson(res, 400, { success: false, error: 'Record ID required' });
-        }
+        const recordId = body.id || params.get('id') || 'all';
 
         const result = await db.deleteAttendanceRecord(recordId);
         return sendJson(res, 200, { success: true, message: result.message, count: result.count });
       }
+    }
+
+    // 3b. ATOMIC PURGE: Clear ALL students AND attendance permanently
+    if (reqPath === '/api/admin/clear-all' && (req.method === 'POST' || req.method === 'DELETE')) {
+      const result = await db.clearAllSystemData();
+      return sendJson(res, 200, { success: true, message: 'All system data permanently erased', ...result });
     }
 
     // 4. ACCOUNTS API

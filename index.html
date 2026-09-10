@@ -373,7 +373,7 @@
             <button class="btn btn-secondary btn-sm" onclick="App.exportRosterCSV()" title="Download CSV backup of whitelist">
               <i class="fa-solid fa-file-export"></i> Export Whitelist
             </button>
-            <button class="btn btn-danger btn-sm" onclick="App.clearAllStudents()" title="Clear student whitelist">
+            <button class="btn btn-danger btn-sm" onclick="App.confirmClearAllStudents()" title="Clear student whitelist">
               <i class="fa-solid fa-trash-can"></i> Clear Whitelist
             </button>
           </div>
@@ -997,6 +997,37 @@
           </button>
         </div>
       </form>
+    </div>
+  </div>
+
+  <!-- MODAL: CONFIRM CLEAR WHITELIST & PERMANENT ERASE (Admin Only) -->
+  <div class="modal-backdrop" id="modalClearWhitelist">
+    <div class="modal-box modal-danger-box">
+      <div class="modal-header">
+        <h3 class="text-danger"><i class="fa-solid fa-triangle-exclamation modal-icon-red"></i> Clear Whitelist & Permanently Erase All Data</h3>
+        <button class="btn btn-secondary btn-icon" onclick="App.closeModal('modalClearWhitelist')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p class="text-white modal-clear-warning">
+          <strong>Warning:</strong> This action will <strong>permanently erase</strong> all registered students and attendance records from both <strong>MongoDB Atlas Cloud</strong> and local storage.
+        </p>
+        <div class="clear-impact-list">
+          <div><i class="fa-solid fa-users-slash text-danger"></i> <strong>Registered Students:</strong> Reset to <strong>0</strong> (Whitelist emptied)</div>
+          <div><i class="fa-solid fa-clipboard-user text-danger"></i> <strong>Present Today:</strong> Reset to <strong>0</strong> (Check-ins wiped)</div>
+          <div><i class="fa-solid fa-chart-pie text-danger"></i> <strong>Attendance Rate:</strong> Reset to <strong>0%</strong></div>
+          <div><i class="fa-solid fa-barcode text-danger"></i> <strong>Total Scans Logged:</strong> Reset to <strong>0</strong></div>
+          <div><i class="fa-solid fa-cloud text-danger"></i> <strong>MongoDB Atlas & Local Files:</strong> Permanently purged</div>
+        </div>
+        <p class="text-muted modal-clear-note">
+          This action cannot be undone. Once cleared, the data will NEVER reappear or resurrect.
+        </p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="App.closeModal('modalClearWhitelist')">Cancel</button>
+        <button type="button" class="btn btn-danger" id="btnConfirmPermanentClear" onclick="App.executePermanentClear()">
+          <i class="fa-solid fa-trash-can"></i> Erase Everything Permanently
+        </button>
+      </div>
     </div>
   </div>
 

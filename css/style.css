@@ -1385,6 +1385,35 @@ body {
   transform: scale(1);
 }
 
+.modal-danger-box {
+  border-color: rgba(239, 68, 68, 0.4);
+  box-shadow: 0 10px 40px rgba(239, 68, 68, 0.2), var(--shadow-lg);
+}
+
+.modal-icon-red {
+  color: #ef4444;
+  margin-right: 0.5rem;
+}
+
+.modal-clear-warning {
+  font-size: 1rem;
+  margin-bottom: 1rem;
+}
+
+.clear-impact-list {
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: 8px;
+  padding: 1rem;
+  margin-bottom: 1rem;
+  font-size: 0.92rem;
+  line-height: 1.8;
+}
+
+.modal-clear-note {
+  font-size: 0.88rem;
+}
+
 .modal-header {
   padding: 1.25rem 1.75rem;
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
