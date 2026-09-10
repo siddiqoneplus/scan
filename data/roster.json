@@ -1,1 +1,1248 @@
-[]
+[
+  {
+    "rollNo": "STUDENT ID",
+    "name": "Name",
+    "branch": "Data Science (DS)",
+    "year": "2024 Batch (1st Year)",
+    "assignedTo": "all"
+  },
+  {
+    "rollNo": "159/AIM/2026",
+    "name": "Pardha saradi",
+    "branch": "Data Science (DS)",
+    "year": "2015 Batch (4th Year)",
+    "assignedTo": "all"
+  },
+  {
+    "rollNo": "25A81A6130",
+    "name": "Karthik deepak",
+    "branch": "AIML (AI & Machine Learning)",
+    "year": "2025 Batch (2nd Year)",
+    "assignedTo": "all"
+  },
+  {
+    "rollNo": "24A81A4380",
+    "name": "Jagu Uday Naga Rama Krishna",
+    "branch": "CAI (Computer Science & AI)",
+    "year": "2024 Batch (3rd Year)",
+    "assignedTo": "all"
+  },
+  {
+    "rollNo": "195",
+    "name": "G.Drakshayani",
+    "branch": "Data Science (DS)",
+    "year": "2019 Batch (4th Year)",
+    "assignedTo": "all"
+  },
+  {
+    "rollNo": "25A81A43B9",
+    "name": "Navyasri Thota",
+    "branch": "CAI (Computer Science & AI)",
+    "year": "2025 Batch (2nd Year)",
+    "assignedTo": "all"
+  },
+  {
+    "rollNo": "24A81A43A2",
+    "name": "Mahalakshmi metla",
+    "branch": "CAI (Computer Science & AI)",
+    "year": "2024 Batch (3rd Year)",
+    "assignedTo": "all"
+  },
+  {
+    "rollNo": "28",
+    "name": "Shaik Nihal",
+    "branch": "Data Science (DS)",
+    "year": "2028 Batch (1st Year)",
+    "assignedTo": "all"
+  },
+  {
+    "rollNo": "25A81A4418",
+    "name": "Jeeri upesh reddy",
+    "branch": "Data Science (DS)",
+    "year": "2025 Batch (2nd Year)",
+    "assignedTo": "all"
+  },
+  {
+    "rollNo": "24A81A4465",
+    "name": "Venkata Sidhi Pati",
+    "branch": "Data Science (DS)",
+    "year": "2024 Batch (3rd Year)",
+    "assignedTo": "all"
+  },
+  {
+    "rollNo": "013/CSD/2026",
+    "name": "G. Pranathi",
+    "branch": "Data Science (DS)",
+    "year": "2001 Batch (4th Year)",
+    "assignedTo": "all"
+  },
+  {
+    "rollNo": "25A81A4307",
+    "name": "Bemineni Vanitha",
+    "branch": "CAI (Computer Science & AI)",
+    "year": "2025 Batch (2nd Year)",
+    "assignedTo": "all"
+  },
+  {
+    "rollNo": "24A81A43B4",
+    "name": "Jyothi",
+    "branch": "CAI (Computer Science & AI)",
+    "year": "2024 Batch (3rd Year)",
+    "assignedTo": "all"
+  },
+  {
+    "rollNo": "74",
+    "name": "Charan srikar",
+    "branch": "Data Science (DS)",
+    "year": "2074 Batch (1st Year)",
+    "assignedTo": "all"
+  },
+  {
+    "rollNo": "25A81A4458",
+    "name": "Raju",
+    "branch": "Data Science (DS)",
+    "year": "2025 Batch (2nd Year)",
+    "assignedTo": "all"
+  },
+  {
+    "rollNo": "24A81A61A4",
+    "name": "Midde Jai Surya",
+    "branch": "AIML (AI & Machine Learning)",
+    "year": "2024 Batch (3rd Year)",
+    "assignedTo": "all"
+  },
+  {
+    "rollNo": "034/CSD/2026",
+    "name": "Pallabothula amrutha",
+    "branch": "Data Science (DS)",
+    "year": "2003 Batch (4th Year)",
+    "assignedTo": "all"
+  },
+  {
+    "rollNo": "25A81A61B6",
+    "name": "Rajana Lasya Venkata Durga",
+    "branch": "AIML (AI & Machine Learning)",
+    "year": "2025 Batch (2nd Year)",
+    "assignedTo": "all"
+  },
+  {
+    "rollNo": "24A81A43C2",
+    "name": "Sanjana Singampalli",
+    "branch": "CAI (Computer Science & AI)",
+    "year": "2024 Batch (3rd Year)",
+    "assignedTo": "all"
+  },
+  {
+    "rollNo": "52",
+    "name": "A.satya raj kumar",
+    "branch": "Data Science (DS)",
+    "year": "2052 Batch (1st Year)",
+    "assignedTo": "all"
+  },
+  {
+    "rollNo": "25A81A61C8",
+    "name": "AAKASHBABU UNNAMATI",
+    "branch": "AIML (AI & Machine Learning)",
+    "year": "2025 Batch (2nd Year)",
+    "assignedTo": "all"
+  },
+  {
+    "rollNo": "24A81A4389",
+    "name": "Kopalli Baby Venkata Sai Dhanasree",
+    "branch": "CAI (Computer Science & AI)",
+    "year": "2024 Batch (3rd Year)",
+    "assignedTo": "all"
+  },
+  {
+    "rollNo": "036/CSD/2026",
+    "name": "Yarragolla Nandini",
+    "branch": "Data Science (DS)",
+    "year": "2003 Batch (4th Year)",
+    "assignedTo": "all"
+  },
+  {
+    "rollNo": "25A81A61C0",
+    "name": "Seelamantula pujitha",
+    "branch": "AIML (AI & Machine Learning)",
+    "year": "2025 Batch (2nd Year)",
+    "assignedTo": "all"
+  },
+  {
+    "rollNo": "24A81A6178",
+    "name": "B.Gopi Chandana",
+    "branch": "AIML (AI & Machine Learning)",
+    "year": "2024 Batch (3rd Year)",
+    "assignedTo": "all"
+  },
+  {
+    "rollNo": "65",
+    "name": "Akshay",
+    "branch": "Data Science (DS)",
+    "year": "2065 Batch (1st Year)",
+    "assignedTo": "all"
+  },
+  {
+    "rollNo": "25A81A61B5",
+    "name": "P. Hema chandra",
+    "branch": "AIML (AI & Machine Learning)",
+    "year": "2025 Batch (2nd Year)",
+    "assignedTo": "all"
+  },
+  {
+    "rollNo": "24A81A4433",
+    "name": "Raju korada",
+    "branch": "Data Science (DS)",
+    "year": "2024 Batch (3rd Year)",
+    "assignedTo": "all"
+  },
+  {
+    "rollNo": "062/CSD/2026",
+    "name": "Geethasri. Kompalli",
+    "branch": "Data Science (DS)",
+    "year": "2006 Batch (4th Year)",
+    "assignedTo": "all"
+  },
+  {
+    "rollNo": "25A81A43A1",
+    "name": "Mohan Manjusha",
+    "branch": "CAI (Computer Science & AI)",
+    "year": "2025 Batch (2nd Year)",
+    "assignedTo": "all"
+  },
+  {
+    "rollNo": "24A81A43A9",
+    "name": "Pamarthi Lakshitha",
+    "branch": "CAI (Computer Science & AI)",
+    "year": "2024 Batch (3rd Year)",
+    "assignedTo": "all"
+  },
+  {
+    "rollNo": "62",
+    "name": "K kishor venkata ganesh",
+    "branch": "Data Science (DS)",
+    "year": "2062 Batch (1st Year)",
+    "assignedTo": "all"
+  },
+  {
+    "rollNo": "25A81A43H4",
+    "name": "N Shalem",
+    "branch": "CAI (Computer Science & AI)",
+    "year": "2025 Batch (2nd Year)",
+    "assignedTo": "all"
+  },
+  {
+    "rollNo": "24A81A4406",
+    "name": "Charan",
+    "branch": "Data Science (DS)",
+    "year": "2024 Batch (3rd Year)",
+    "assignedTo": "all"
+  },
+  {
+    "rollNo": "009/CSD/2026",
+    "name": "Bellamkonda keerthi",
+    "branch": "Data Science (DS)",
+    "year": "2000 Batch (4th Year)",
+    "assignedTo": "all"
+  },
+  {
+    "rollNo": "25A81A43E4",
+    "name": "BINDHU MADHURI DAKARAPU",
+    "branch": "CAI (Computer Science & AI)",
+    "year": "2025 Batch (2nd Year)",
+    "assignedTo": "all"
+  },
+  {
+    "rollNo": "25A85A4307",
+    "name": "Ravipati Chaitanya Ramakrishna",
+    "branch": "CAI (Computer Science & AI)",
+    "year": "2025 Batch (2nd Year)",
+    "assignedTo": "all"
+  },
+  {
+    "rollNo": "066/CSD/2026",
+    "name": "Kolukuluri yogendra sai Charan varma",
+    "branch": "Data Science (DS)",
+    "year": "2006 Batch (4th Year)",
+    "assignedTo": "all"
+  },
+  {
+    "rollNo": "25A81A4437",
+    "name": "M.leela sivasai",
+    "branch": "Data Science (DS)",
+    "year": "2025 Batch (2nd Year)",
+    "assignedTo": "all"
+  },
+  {
+    "rollNo": "24A81A4411",
+    "name": "Kishore",
+    "branch": "Data Science (DS)",
+    "year": "2024 Batch (3rd Year)",
+    "assignedTo": "all"
+  },
+  {
+    "rollNo": "O67/CSD/2026",
+    "name": "K pallavi",
+    "branch": "Data Science (DS)",
+    "year": "2024 Batch (1st Year)",
+    "assignedTo": "all"
+  },
+  {
+    "rollNo": "25A81A43H5",
+    "name": "NARAYANA VIJAYA HARIKA",
+    "branch": "CAI (Computer Science & AI)",
+    "year": "2025 Batch (2nd Year)",
+    "assignedTo": "all"
+  },
+  {
+    "rollNo": "24A81A43A5",
+    "name": "TejasviniMuthiki",
+    "branch": "CAI (Computer Science & AI)",
+    "year": "2024 Batch (3rd Year)",
+    "assignedTo": "all"
+  },
+  {
+    "rollNo": "035/CSD/2026",
+    "name": "Posimsetti sowrya navadeep",
+    "branch": "Data Science (DS)",
+    "year": "2003 Batch (4th Year)",
+    "assignedTo": "all"
+  },
+  {
+    "rollNo": "25A81A43F7",
+    "name": "Kankipati Yaswanth",
+    "branch": "CAI (Computer Science & AI)",
+    "year": "2025 Batch (2nd Year)",
+    "assignedTo": "all"
+  },
+  {
+    "rollNo": "24A81A4322",
+    "name": "Gudimentla raja narendra reddy",
+    "branch": "CAI (Computer Science & AI)",
+    "year": "2024 Batch (3rd Year)",
+    "assignedTo": "all"
+  },
+  {
+    "rollNo": "64",
+    "name": "S.Lukcy",
+    "branch": "Data Science (DS)",
+    "year": "2064 Batch (1st Year)",
+    "assignedTo": "all"
+  },
+  {
+    "rollNo": "25A81A61C9",
+    "name": "Keerthika vaishni",
+    "branch": "AIML (AI & Machine Learning)",
+    "year": "2025 Batch (2nd Year)",
+    "assignedTo": "all"
+  },
+  {
+    "rollNo": "24A81A43B3",
+    "name": "Jyothi priya",
+    "branch": "CAI (Computer Science & AI)",
+    "year": "2024 Batch (3rd Year)",
+    "assignedTo": "all"
+  },
+  {
+    "rollNo": "021/CSD/2026",
+    "name": "Sammenga sainadh ganesh",
+    "branch": "Data Science (DS)",
+    "year": "2002 Batch (4th Year)",
+    "assignedTo": "all"
+  },
+  {
+    "rollNo": "26A85A6113",
+    "name": "Pujith",
+    "branch": "AIML (AI & Machine Learning)",
+    "year": "2026 Batch (1st Year)",
+    "assignedTo": "all"
+  },
+  {
+    "rollNo": "24A81A6127",
+    "name": "K.shanmukh",
+    "branch": "AIML (AI & Machine Learning)",
+    "year": "2024 Batch (3rd Year)",
+    "assignedTo": "all"
+  },
+  {
+    "rollNo": "146/CAI/2026",
+    "name": "Pilli Renuka",
+    "branch": "CAI (Computer Science & AI)",
+    "year": "2014 Batch (4th Year)",
+    "assignedTo": "all"
+  },
+  {
+    "rollNo": "25A81A4381",
+    "name": "Priya Nandini Ganji",
+    "branch": "CAI (Computer Science & AI)",
+    "year": "2025 Batch (2nd Year)",
+    "assignedTo": "all"
+  },
+  {
+    "rollNo": "24A81A6110",
+    "name": "CHAKKA MOHANA SRILAKSHMI ALEKHYA",
+    "branch": "AIML (AI & Machine Learning)",
+    "year": "2024 Batch (3rd Year)",
+    "assignedTo": "all"
+  },
+  {
+    "rollNo": "53",
+    "name": "KONDETI PRASANTH",
+    "branch": "Data Science (DS)",
+    "year": "2053 Batch (1st Year)",
+    "assignedTo": "all"
+  },
+  {
+    "rollNo": "25A81A4414",
+    "name": "G.Yaswanth Vinny",
+    "branch": "Data Science (DS)",
+    "year": "2025 Batch (2nd Year)",
+    "assignedTo": "all"
+  },
+  {
+    "rollNo": "24A81A6117",
+    "name": "D.Abhiram vinay",
+    "branch": "AIML (AI & Machine Learning)",
+    "year": "2024 Batch (3rd Year)",
+    "assignedTo": "all"
+  },
+  {
+    "rollNo": "012/CSD/2026",
+    "name": "Bhavyasri",
+    "branch": "Data Science (DS)",
+    "year": "2001 Batch (4th Year)",
+    "assignedTo": "all"
+  },
+  {
+    "rollNo": "25A81A6199",
+    "name": "Matta Naga Sri Ambika",
+    "branch": "AIML (AI & Machine Learning)",
+    "year": "2025 Batch (2nd Year)",
+    "assignedTo": "all"
+  },
+  {
+    "rollNo": "24A81A6166",
+    "name": "Yalla Baby Durga Bhavani",
+    "branch": "AIML (AI & Machine Learning)",
+    "year": "2024 Batch (3rd Year)",
+    "assignedTo": "all"
+  },
+  {
+    "rollNo": "090/CAI/2026",
+    "name": "Revanth Kumar guradasu",
+    "branch": "CAI (Computer Science & AI)",
+    "year": "2009 Batch (4th Year)",
+    "assignedTo": "all"
+  },
+  {
+    "rollNo": "25A81A43F6",
+    "name": "Kankipati saijayanth",
+    "branch": "CAI (Computer Science & AI)",
+    "year": "2025 Batch (2nd Year)",
+    "assignedTo": "all"
+  },
+  {
+    "rollNo": "25A85A4313",
+    "name": "Y.vijayakumar",
+    "branch": "CAI (Computer Science & AI)",
+    "year": "2025 Batch (2nd Year)",
+    "assignedTo": "all"
+  },
+  {
+    "rollNo": "145/AIM/2026",
+    "name": "Eluri Amulya",
+    "branch": "Data Science (DS)",
+    "year": "2014 Batch (4th Year)",
+    "assignedTo": "all"
+  },
+  {
+    "rollNo": "25A81A4404",
+    "name": "A.yogitha",
+    "branch": "Data Science (DS)",
+    "year": "2025 Batch (2nd Year)",
+    "assignedTo": "all"
+  },
+  {
+    "rollNo": "24A81A6121",
+    "name": "Sravya Goganamanda",
+    "branch": "AIML (AI & Machine Learning)",
+    "year": "2024 Batch (3rd Year)",
+    "assignedTo": "all"
+  },
+  {
+    "rollNo": "25A81A43A0",
+    "name": "M.Lakshmi Narayana",
+    "branch": "CAI (Computer Science & AI)",
+    "year": "2025 Batch (2nd Year)",
+    "assignedTo": "all"
+  },
+  {
+    "rollNo": "25A81A43B1",
+    "name": "P.Manohar",
+    "branch": "CAI (Computer Science & AI)",
+    "year": "2025 Batch (2nd Year)",
+    "assignedTo": "all"
+  },
+  {
+    "rollNo": "24A81A6120",
+    "name": "Bharath.g",
+    "branch": "AIML (AI & Machine Learning)",
+    "year": "2024 Batch (3rd Year)",
+    "assignedTo": "all"
+  },
+  {
+    "rollNo": "O01",
+    "name": "Shanmukha sri venkata yasaswini",
+    "branch": "Data Science (DS)",
+    "year": "2024 Batch (1st Year)",
+    "assignedTo": "all"
+  },
+  {
+    "rollNo": "25A81A4398",
+    "name": "Kottapalli.v.s.Harshitha",
+    "branch": "CAI (Computer Science & AI)",
+    "year": "2025 Batch (2nd Year)",
+    "assignedTo": "all"
+  },
+  {
+    "rollNo": "24A81A4455",
+    "name": "Sk Afrin",
+    "branch": "Data Science (DS)",
+    "year": "2024 Batch (3rd Year)",
+    "assignedTo": "all"
+  },
+  {
+    "rollNo": "112",
+    "name": "Yaswanth",
+    "branch": "Data Science (DS)",
+    "year": "2011 Batch (4th Year)",
+    "assignedTo": "all"
+  },
+  {
+    "rollNo": "25A81A6115",
+    "name": "Geddada shanmukh",
+    "branch": "AIML (AI & Machine Learning)",
+    "year": "2025 Batch (2nd Year)",
+    "assignedTo": "all"
+  },
+  {
+    "rollNo": "24A81A61C8",
+    "name": "Kishore Tummala",
+    "branch": "AIML (AI & Machine Learning)",
+    "year": "2024 Batch (3rd Year)",
+    "assignedTo": "all"
+  },
+  {
+    "rollNo": "48",
+    "name": "Likhitha Dasari",
+    "branch": "Data Science (DS)",
+    "year": "2048 Batch (1st Year)",
+    "assignedTo": "all"
+  },
+  {
+    "rollNo": "25A81A4397",
+    "name": "Srilakshmi Komati",
+    "branch": "CAI (Computer Science & AI)",
+    "year": "2025 Batch (2nd Year)",
+    "assignedTo": "all"
+  },
+  {
+    "rollNo": "24A81A4420",
+    "name": "Vathsalyatha",
+    "branch": "Data Science (DS)",
+    "year": "2024 Batch (3rd Year)",
+    "assignedTo": "all"
+  },
+  {
+    "rollNo": "007/CAI/2026",
+    "name": "Ch Thrivikram",
+    "branch": "CAI (Computer Science & AI)",
+    "year": "2000 Batch (4th Year)",
+    "assignedTo": "all"
+  },
+  {
+    "rollNo": "25A81A4409",
+    "name": "Jayadurga naga kalyan devagalla",
+    "branch": "Data Science (DS)",
+    "year": "2025 Batch (2nd Year)",
+    "assignedTo": "all"
+  },
+  {
+    "rollNo": "24A81A4349",
+    "name": "Sundarapalli Charan Prabhu",
+    "branch": "CAI (Computer Science & AI)",
+    "year": "2024 Batch (3rd Year)",
+    "assignedTo": "all"
+  },
+  {
+    "rollNo": "14",
+    "name": "Sai sumalatha chitikela",
+    "branch": "Data Science (DS)",
+    "year": "2014 Batch (4th Year)",
+    "assignedTo": "all"
+  },
+  {
+    "rollNo": "25A81A4401",
+    "name": "Yasaswi addada",
+    "branch": "Data Science (DS)",
+    "year": "2025 Batch (2nd Year)",
+    "assignedTo": "all"
+  },
+  {
+    "rollNo": "24A81A61C0",
+    "name": "Rajahmundry Sravani",
+    "branch": "AIML (AI & Machine Learning)",
+    "year": "2024 Batch (3rd Year)",
+    "assignedTo": "all"
+  },
+  {
+    "rollNo": "008/CAI/2026",
+    "name": "P.Vasanth",
+    "branch": "CAI (Computer Science & AI)",
+    "year": "2000 Batch (4th Year)",
+    "assignedTo": "all"
+  },
+  {
+    "rollNo": "25A81A6162",
+    "name": "Naga Durga Rao Veeranki",
+    "branch": "AIML (AI & Machine Learning)",
+    "year": "2025 Batch (2nd Year)",
+    "assignedTo": "all"
+  },
+  {
+    "rollNo": "24A81A4351",
+    "name": "Somalanka Subrahmanya Abhiram",
+    "branch": "CAI (Computer Science & AI)",
+    "year": "2024 Batch (3rd Year)",
+    "assignedTo": "all"
+  },
+  {
+    "rollNo": "205",
+    "name": "Keerthi chandana kesana",
+    "branch": "Data Science (DS)",
+    "year": "2020 Batch (4th Year)",
+    "assignedTo": "all"
+  },
+  {
+    "rollNo": "25A81A6119",
+    "name": "Gubili Raga Satwika",
+    "branch": "AIML (AI & Machine Learning)",
+    "year": "2025 Batch (2nd Year)",
+    "assignedTo": "all"
+  },
+  {
+    "rollNo": "24A81A4378",
+    "name": "Gandrothu Pavani",
+    "branch": "CAI (Computer Science & AI)",
+    "year": "2024 Batch (3rd Year)",
+    "assignedTo": "all"
+  },
+  {
+    "rollNo": "40",
+    "name": "M.teja",
+    "branch": "Data Science (DS)",
+    "year": "2040 Batch (1st Year)",
+    "assignedTo": "all"
+  },
+  {
+    "rollNo": "25A81A6158",
+    "name": "Lakshmi Narasimha Tallapalli",
+    "branch": "AIML (AI & Machine Learning)",
+    "year": "2025 Batch (2nd Year)",
+    "assignedTo": "all"
+  },
+  {
+    "rollNo": "24A81A6159",
+    "name": "T.S.S.Pavan Kumar Reddy",
+    "branch": "AIML (AI & Machine Learning)",
+    "year": "2024 Batch (3rd Year)",
+    "assignedTo": "all"
+  },
+  {
+    "rollNo": "191/AIM/2026",
+    "name": "Y vyshnavi",
+    "branch": "Data Science (DS)",
+    "year": "2019 Batch (4th Year)",
+    "assignedTo": "all"
+  },
+  {
+    "rollNo": "25A81A4388",
+    "name": "Chandana Jonnalagadda",
+    "branch": "CAI (Computer Science & AI)",
+    "year": "2025 Batch (2nd Year)",
+    "assignedTo": "all"
+  },
+  {
+    "rollNo": "24A81A43D1",
+    "name": "Yedida Devi Uma Mani Alekhya",
+    "branch": "CAI (Computer Science & AI)",
+    "year": "2024 Batch (3rd Year)",
+    "assignedTo": "all"
+  },
+  {
+    "rollNo": "046/CSD/",
+    "name": "Anil",
+    "branch": "Data Science (DS)",
+    "year": "2004 Batch (4th Year)",
+    "assignedTo": "all"
+  },
+  {
+    "rollNo": "25A81A6147",
+    "name": "Madhu palagani",
+    "branch": "AIML (AI & Machine Learning)",
+    "year": "2025 Batch (2nd Year)",
+    "assignedTo": "all"
+  },
+  {
+    "rollNo": "24A81A4384",
+    "name": "SAI KRISHNA KANDIVALASA",
+    "branch": "CAI (Computer Science & AI)",
+    "year": "2024 Batch (3rd Year)",
+    "assignedTo": "all"
+  },
+  {
+    "rollNo": "CAI/202",
+    "name": "Pinapathumeenu",
+    "branch": "CAI (Computer Science & AI)",
+    "year": "2024 Batch (1st Year)",
+    "assignedTo": "all"
+  },
+  {
+    "rollNo": "25A81A4420",
+    "name": "Kaada Sri Sai Rama Gani Lakshmi",
+    "branch": "Data Science (DS)",
+    "year": "2025 Batch (2nd Year)",
+    "assignedTo": "all"
+  },
+  {
+    "rollNo": "24A81A43C7",
+    "name": "Vankayala Jyothi",
+    "branch": "CAI (Computer Science & AI)",
+    "year": "2024 Batch (3rd Year)",
+    "assignedTo": "all"
+  },
+  {
+    "rollNo": "179\\CAI\\26",
+    "name": "Sirigineedi Naga Veera Manikanta",
+    "branch": "CAI (Computer Science & AI)",
+    "year": "2017 Batch (4th Year)",
+    "assignedTo": "all"
+  },
+  {
+    "rollNo": "25A81A43C1",
+    "name": "Thota venkata Sai Kumar",
+    "branch": "CAI (Computer Science & AI)",
+    "year": "2025 Batch (2nd Year)",
+    "assignedTo": "all"
+  },
+  {
+    "rollNo": "24A81A43A6",
+    "name": "NAKKA DURGA RAMESH",
+    "branch": "CAI (Computer Science & AI)",
+    "year": "2024 Batch (3rd Year)",
+    "assignedTo": "all"
+  },
+  {
+    "rollNo": "086/AIM/2026",
+    "name": "Velagala Gayatri",
+    "branch": "Data Science (DS)",
+    "year": "2008 Batch (4th Year)",
+    "assignedTo": "all"
+  },
+  {
+    "rollNo": "25A81A6131",
+    "name": "Mohitha lakshmi kolla",
+    "branch": "AIML (AI & Machine Learning)",
+    "year": "2025 Batch (2nd Year)",
+    "assignedTo": "all"
+  },
+  {
+    "rollNo": "24A81A61C2",
+    "name": "SURYA SAGA",
+    "branch": "AIML (AI & Machine Learning)",
+    "year": "2024 Batch (3rd Year)",
+    "assignedTo": "all"
+  },
+  {
+    "rollNo": "37",
+    "name": "Thaswi sai ram malisetti",
+    "branch": "Data Science (DS)",
+    "year": "2037 Batch (1st Year)",
+    "assignedTo": "all"
+  },
+  {
+    "rollNo": "25A81A6175",
+    "name": "Borra Manideepu",
+    "branch": "AIML (AI & Machine Learning)",
+    "year": "2025 Batch (2nd Year)",
+    "assignedTo": "all"
+  },
+  {
+    "rollNo": "24A81A43D0",
+    "name": "Sriharsha",
+    "branch": "CAI (Computer Science & AI)",
+    "year": "2024 Batch (3rd Year)",
+    "assignedTo": "all"
+  },
+  {
+    "rollNo": "077/CAI/2026",
+    "name": "G.Divya Sahithi",
+    "branch": "CAI (Computer Science & AI)",
+    "year": "2007 Batch (4th Year)",
+    "assignedTo": "all"
+  },
+  {
+    "rollNo": "25A81A6168",
+    "name": "Akula kavya sri",
+    "branch": "AIML (AI & Machine Learning)",
+    "year": "2025 Batch (2nd Year)",
+    "assignedTo": "all"
+  },
+  {
+    "rollNo": "24A81A6133",
+    "name": "Katakamsetti Divya Chandra Mounika",
+    "branch": "AIML (AI & Machine Learning)",
+    "year": "2024 Batch (3rd Year)",
+    "assignedTo": "all"
+  },
+  {
+    "rollNo": "045/CSD",
+    "name": "murari chowdhury",
+    "branch": "Data Science (DS)",
+    "year": "2004 Batch (4th Year)",
+    "assignedTo": "all"
+  },
+  {
+    "rollNo": "25A81A43G7",
+    "name": "M Mani Sai Teja",
+    "branch": "CAI (Computer Science & AI)",
+    "year": "2025 Batch (2nd Year)",
+    "assignedTo": "all"
+  },
+  {
+    "rollNo": "25A85A4309",
+    "name": "K.Dhanush",
+    "branch": "CAI (Computer Science & AI)",
+    "year": "2025 Batch (2nd Year)",
+    "assignedTo": "all"
+  },
+  {
+    "rollNo": "CAI/116",
+    "name": "Lankapalli Valli prasanna kumari",
+    "branch": "CAI (Computer Science & AI)",
+    "year": "2024 Batch (1st Year)",
+    "assignedTo": "all"
+  },
+  {
+    "rollNo": "25A81A6153",
+    "name": "Devika Jagadeeswari Rajulapati",
+    "branch": "AIML (AI & Machine Learning)",
+    "year": "2025 Batch (2nd Year)",
+    "assignedTo": "all"
+  },
+  {
+    "rollNo": "24A81A4379",
+    "name": "Meghana Garikimukkala",
+    "branch": "CAI (Computer Science & AI)",
+    "year": "2024 Batch (3rd Year)",
+    "assignedTo": "all"
+  },
+  {
+    "rollNo": "204/AIML/2026",
+    "name": "P.sujith",
+    "branch": "AIML (AI & Machine Learning)",
+    "year": "2020 Batch (4th Year)",
+    "assignedTo": "all"
+  },
+  {
+    "rollNo": "25A81A4408",
+    "name": "borra Kowshik",
+    "branch": "Data Science (DS)",
+    "year": "2025 Batch (2nd Year)",
+    "assignedTo": "all"
+  },
+  {
+    "rollNo": "24A81A4310",
+    "name": "DANGETI PAVAN",
+    "branch": "CAI (Computer Science & AI)",
+    "year": "2024 Batch (3rd Year)",
+    "assignedTo": "all"
+  },
+  {
+    "rollNo": "101/CAI/2026",
+    "name": "Ch.khyati",
+    "branch": "CAI (Computer Science & AI)",
+    "year": "2010 Batch (4th Year)",
+    "assignedTo": "all"
+  },
+  {
+    "rollNo": "25A81A61F9",
+    "name": "Manepalli Gyana kyathi sai vasavi",
+    "branch": "AIML (AI & Machine Learning)",
+    "year": "2025 Batch (2nd Year)",
+    "assignedTo": "all"
+  },
+  {
+    "rollNo": "24A81A4385",
+    "name": "Dhana Bhavani.K",
+    "branch": "CAI (Computer Science & AI)",
+    "year": "2024 Batch (3rd Year)",
+    "assignedTo": "all"
+  },
+  {
+    "rollNo": "022/CSD",
+    "name": "Virodhula. Praveen Sai",
+    "branch": "Data Science (DS)",
+    "year": "2002 Batch (4th Year)",
+    "assignedTo": "all"
+  },
+  {
+    "rollNo": "25A81A6155",
+    "name": "Sk.Siraj Rehman",
+    "branch": "AIML (AI & Machine Learning)",
+    "year": "2025 Batch (2nd Year)",
+    "assignedTo": "all"
+  },
+  {
+    "rollNo": "24A81A4364",
+    "name": "Yarlapati Venkata Naga Durga Tarun",
+    "branch": "CAI (Computer Science & AI)",
+    "year": "2024 Batch (3rd Year)",
+    "assignedTo": "all"
+  },
+  {
+    "rollNo": "25A81A61B3",
+    "name": "P.Yamini",
+    "branch": "AIML (AI & Machine Learning)",
+    "year": "2025 Batch (2nd Year)",
+    "assignedTo": "all"
+  },
+  {
+    "rollNo": "25A81A61F5",
+    "name": "Koduri joshna surya sri priya",
+    "branch": "AIML (AI & Machine Learning)",
+    "year": "2025 Batch (2nd Year)",
+    "assignedTo": "all"
+  },
+  {
+    "rollNo": "24A81A43B7",
+    "name": "Shylu Akshaya. R",
+    "branch": "CAI (Computer Science & AI)",
+    "year": "2024 Batch (3rd Year)",
+    "assignedTo": "all"
+  },
+  {
+    "rollNo": "027/CAI/2026",
+    "name": "N.Vishnu Pavan",
+    "branch": "CAI (Computer Science & AI)",
+    "year": "2002 Batch (4th Year)",
+    "assignedTo": "all"
+  },
+  {
+    "rollNo": "25A81A6117",
+    "name": "Hitesh gonugunta",
+    "branch": "AIML (AI & Machine Learning)",
+    "year": "2025 Batch (2nd Year)",
+    "assignedTo": "all"
+  },
+  {
+    "rollNo": "25A81A6160",
+    "name": "Balaji Tirumani",
+    "branch": "AIML (AI & Machine Learning)",
+    "year": "2025 Batch (2nd Year)",
+    "assignedTo": "all"
+  },
+  {
+    "rollNo": "26A85A6123",
+    "name": "Veeravalli Sindhu",
+    "branch": "AIML (AI & Machine Learning)",
+    "year": "2026 Batch (1st Year)",
+    "assignedTo": "all"
+  },
+  {
+    "rollNo": "25A81A61E8",
+    "name": "Spurthi",
+    "branch": "AIML (AI & Machine Learning)",
+    "year": "2025 Batch (2nd Year)",
+    "assignedTo": "all"
+  },
+  {
+    "rollNo": "24A81A4301",
+    "name": "Harshini Chowdary",
+    "branch": "CAI (Computer Science & AI)",
+    "year": "2024 Batch (3rd Year)",
+    "assignedTo": "all"
+  },
+  {
+    "rollNo": "026/CAI/2026",
+    "name": "G. Dorababu",
+    "branch": "CAI (Computer Science & AI)",
+    "year": "2002 Batch (4th Year)",
+    "assignedTo": "all"
+  },
+  {
+    "rollNo": "25A81A4371",
+    "name": "Bhavath",
+    "branch": "CAI (Computer Science & AI)",
+    "year": "2025 Batch (2nd Year)",
+    "assignedTo": "all"
+  },
+  {
+    "rollNo": "24A81A6115",
+    "name": "Charan sai",
+    "branch": "AIML (AI & Machine Learning)",
+    "year": "2024 Batch (3rd Year)",
+    "assignedTo": "all"
+  },
+  {
+    "rollNo": "25A81A6197",
+    "name": "Manda. Navya satya sri",
+    "branch": "AIML (AI & Machine Learning)",
+    "year": "2025 Batch (2nd Year)",
+    "assignedTo": "all"
+  },
+  {
+    "rollNo": "25A81A43E8",
+    "name": "Navya douluri",
+    "branch": "CAI (Computer Science & AI)",
+    "year": "2025 Batch (2nd Year)",
+    "assignedTo": "all"
+  },
+  {
+    "rollNo": "24A81A6155",
+    "name": "Shaik Rizwana",
+    "branch": "AIML (AI & Machine Learning)",
+    "year": "2024 Batch (3rd Year)",
+    "assignedTo": "all"
+  },
+  {
+    "rollNo": "132/CAI/2026",
+    "name": "G.Rishik",
+    "branch": "CAI (Computer Science & AI)",
+    "year": "2013 Batch (4th Year)",
+    "assignedTo": "all"
+  },
+  {
+    "rollNo": "26A85A4309",
+    "name": "Geddam tirumala sri thanush",
+    "branch": "CAI (Computer Science & AI)",
+    "year": "2026 Batch (1st Year)",
+    "assignedTo": "all"
+  },
+  {
+    "rollNo": "25A81A61A1",
+    "name": "MISALA SHIVA KUMAR",
+    "branch": "AIML (AI & Machine Learning)",
+    "year": "2025 Batch (2nd Year)",
+    "assignedTo": "all"
+  },
+  {
+    "rollNo": "017/AIM/2026",
+    "name": "Mane yajna sri",
+    "branch": "Data Science (DS)",
+    "year": "2001 Batch (4th Year)",
+    "assignedTo": "all"
+  },
+  {
+    "rollNo": "25A81A43A2",
+    "name": "Manda Keerthana",
+    "branch": "CAI (Computer Science & AI)",
+    "year": "2025 Batch (2nd Year)",
+    "assignedTo": "all"
+  },
+  {
+    "rollNo": "24A81A4436",
+    "name": "Madire Tirumala Naga Prathyusha",
+    "branch": "Data Science (DS)",
+    "year": "2024 Batch (3rd Year)",
+    "assignedTo": "all"
+  },
+  {
+    "rollNo": "25A81A61E1",
+    "name": "B.Geethika",
+    "branch": "AIML (AI & Machine Learning)",
+    "year": "2025 Batch (2nd Year)",
+    "assignedTo": "all"
+  },
+  {
+    "rollNo": "25A81A4399",
+    "name": "Geetha madhuri Madicharla",
+    "branch": "CAI (Computer Science & AI)",
+    "year": "2025 Batch (2nd Year)",
+    "assignedTo": "all"
+  },
+  {
+    "rollNo": "24A81A4329",
+    "name": "Janaki Pranahitha kollipara",
+    "branch": "CAI (Computer Science & AI)",
+    "year": "2024 Batch (3rd Year)",
+    "assignedTo": "all"
+  },
+  {
+    "rollNo": "25A81A61E7",
+    "name": "Gadi Durga Anu Swarupa",
+    "branch": "AIML (AI & Machine Learning)",
+    "year": "2025 Batch (2nd Year)",
+    "assignedTo": "all"
+  },
+  {
+    "rollNo": "25A81A6170",
+    "name": "Areti.pavani",
+    "branch": "AIML (AI & Machine Learning)",
+    "year": "2025 Batch (2nd Year)",
+    "assignedTo": "all"
+  },
+  {
+    "rollNo": "24A81A4415",
+    "name": "Chebrolu Sony",
+    "branch": "Data Science (DS)",
+    "year": "2024 Batch (3rd Year)",
+    "assignedTo": "all"
+  },
+  {
+    "rollNo": "26A85A4407",
+    "name": "Rudraraju Harika",
+    "branch": "Data Science (DS)",
+    "year": "2026 Batch (1st Year)",
+    "assignedTo": "all"
+  },
+  {
+    "rollNo": "25A81A6113",
+    "name": "Sravya Sushmitha",
+    "branch": "AIML (AI & Machine Learning)",
+    "year": "2025 Batch (2nd Year)",
+    "assignedTo": "all"
+  },
+  {
+    "rollNo": "24A81A4427",
+    "name": "J. Prasanna",
+    "branch": "Data Science (DS)",
+    "year": "2024 Batch (3rd Year)",
+    "assignedTo": "all"
+  },
+  {
+    "rollNo": "3",
+    "name": "Srimukhi. Maddu",
+    "branch": "Data Science (DS)",
+    "year": "2024 Batch (1st Year)",
+    "assignedTo": "all"
+  },
+  {
+    "rollNo": "25A81A6161",
+    "name": "Uppuluri Satya Harshini",
+    "branch": "AIML (AI & Machine Learning)",
+    "year": "2025 Batch (2nd Year)",
+    "assignedTo": "all"
+  },
+  {
+    "rollNo": "25A81A61D1",
+    "name": "V. Eswari sai keerthana",
+    "branch": "AIML (AI & Machine Learning)",
+    "year": "2025 Batch (2nd Year)",
+    "assignedTo": "all"
+  },
+  {
+    "rollNo": "177",
+    "name": "K bhavya satya srivalli",
+    "branch": "Data Science (DS)",
+    "year": "2017 Batch (4th Year)",
+    "assignedTo": "all"
+  },
+  {
+    "rollNo": "26A85A6118",
+    "name": "Gurajala Dhathreeswari",
+    "branch": "AIML (AI & Machine Learning)",
+    "year": "2026 Batch (1st Year)",
+    "assignedTo": "all"
+  },
+  {
+    "rollNo": "25A81A4424",
+    "name": "Karri Naga Anusha",
+    "branch": "Data Science (DS)",
+    "year": "2025 Batch (2nd Year)",
+    "assignedTo": "all"
+  },
+  {
+    "rollNo": "064/CAI/2026",
+    "name": "Pandraka Navya",
+    "branch": "CAI (Computer Science & AI)",
+    "year": "2006 Batch (4th Year)",
+    "assignedTo": "all"
+  },
+  {
+    "rollNo": "26A85A4401",
+    "name": "Ballipati Bala Gayathri",
+    "branch": "Data Science (DS)",
+    "year": "2026 Batch (1st Year)",
+    "assignedTo": "all"
+  },
+  {
+    "rollNo": "25A81A6178",
+    "name": "Mounika dirisipo",
+    "branch": "AIML (AI & Machine Learning)",
+    "year": "2025 Batch (2nd Year)",
+    "assignedTo": "all"
+  },
+  {
+    "rollNo": "25A81A61C1",
+    "name": "Seerla Bhargav satya sai",
+    "branch": "AIML (AI & Machine Learning)",
+    "year": "2025 Batch (2nd Year)",
+    "assignedTo": "all"
+  },
+  {
+    "rollNo": "25A81A6122",
+    "name": "Chaitanya gummuluri",
+    "branch": "AIML (AI & Machine Learning)",
+    "year": "2025 Batch (2nd Year)",
+    "assignedTo": "all"
+  },
+  {
+    "rollNo": "24A81A4309",
+    "name": "Ch.Devi sri charan",
+    "branch": "CAI (Computer Science & AI)",
+    "year": "2024 Batch (3rd Year)",
+    "assignedTo": "all"
+  },
+  {
+    "rollNo": "25A81A61C2",
+    "name": "Shaik Jareena",
+    "branch": "AIML (AI & Machine Learning)",
+    "year": "2025 Batch (2nd Year)",
+    "assignedTo": "all"
+  },
+  {
+    "rollNo": "25A81A4457",
+    "name": "Tetali uma venkata lakshmi satya sree",
+    "branch": "Data Science (DS)",
+    "year": "2025 Batch (2nd Year)",
+    "assignedTo": "all"
+  },
+  {
+    "rollNo": "24A81A4358",
+    "name": "Uppuluri naga sai sri navyagna",
+    "branch": "CAI (Computer Science & AI)",
+    "year": "2024 Batch (3rd Year)",
+    "assignedTo": "all"
+  },
+  {
+    "rollNo": "26A85A6116",
+    "name": "Yarramsetti Soma Naga Sai Ganesh",
+    "branch": "AIML (AI & Machine Learning)",
+    "year": "2026 Batch (1st Year)",
+    "assignedTo": "all"
+  },
+  {
+    "rollNo": "26A85A4408",
+    "name": "VEMA NAGA VENKATA DURGA SAI CHARAN",
+    "branch": "Data Science (DS)",
+    "year": "2026 Batch (1st Year)",
+    "assignedTo": "all"
+  },
+  {
+    "rollNo": "25A81A43F8",
+    "name": "Sai",
+    "branch": "CAI (Computer Science & AI)",
+    "year": "2025 Batch (2nd Year)",
+    "assignedTo": "all"
+  }
+]

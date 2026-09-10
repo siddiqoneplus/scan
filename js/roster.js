@@ -96,7 +96,7 @@ const RosterManager = (() => {
   }
 
   /**
-   * Sync roster data with centralized backend server
+   * Sync roster data with centralized backend server (Smart Non-Destructive Merge)
    */
   async function syncFromServer() {
     try {
@@ -104,16 +104,49 @@ const RosterManager = (() => {
       if (response.ok) {
         const data = await response.json();
         if (data.success && Array.isArray(data.students)) {
-          const newStudents = data.students.map(s => ({
-            ...s,
-            assignedTo: s.assignedTo || 'all'
-          }));
+          const studentMap = new Map();
+
+          // 1. Server students
+          data.students.forEach(s => {
+            if (s && s.rollNo) {
+              const clean = s.rollNo.trim().toUpperCase();
+              studentMap.set(clean, {
+                ...s,
+                section: s.section || '',
+                assignedTo: s.assignedTo || 'all'
+              });
+            }
+          });
+
+          // 2. Merge local students (never drop locally added students)
+          let hadUnsynced = false;
+          students.forEach(s => {
+            if (s && s.rollNo) {
+              const clean = s.rollNo.trim().toUpperCase();
+              if (!studentMap.has(clean)) {
+                studentMap.set(clean, s);
+                hadUnsynced = true;
+              } else {
+                // If local has section and server doesn't, preserve local section
+                const existing = studentMap.get(clean);
+                if (s.section && !existing.section) {
+                  existing.section = s.section;
+                }
+              }
+            }
+          });
+
+          const mergedStudents = Array.from(studentMap.values());
           const currentStr = JSON.stringify(students);
-          const newStr = JSON.stringify(newStudents);
+          const newStr = JSON.stringify(mergedStudents);
           if (currentStr !== newStr) {
-            students = newStudents;
+            students = mergedStudents;
             localStorage.setItem(STORAGE_KEY, newStr);
             window.dispatchEvent(new CustomEvent('roster:updated', { detail: { count: students.length } }));
+          }
+
+          if (hadUnsynced) {
+            saveStudents(true);
           }
         }
       }
@@ -228,7 +261,13 @@ const RosterManager = (() => {
   function findStudent(rawRollNo) {
     if (!rawRollNo) return null;
     const cleanRoll = rawRollNo.trim().toUpperCase();
-    return students.find(s => s.rollNo.trim().toUpperCase() === cleanRoll) || null;
+    const compactRoll = cleanRoll.replace(/[\s\-_/]/g, '');
+    return students.find(s => {
+      const sRoll = (s.rollNo || '').trim().toUpperCase();
+      if (sRoll === cleanRoll) return true;
+      if (sRoll.replace(/[\s\-_/]/g, '') === compactRoll) return true;
+      return false;
+    }) || null;
   }
 
   /**

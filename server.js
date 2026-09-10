@@ -160,17 +160,16 @@ const server = http.createServer(async (req, res) => {
       if (req.method === 'POST') {
         const body = await parseBody(req);
 
-        if (body.logs && Array.isArray(body.logs)) {
-          await db.saveAttendance(body.logs);
-          return sendJson(res, 200, { success: true, count: body.logs.length, logs: body.logs });
-        } else if (body.record) {
+        // 1. If an individual scanned record is supplied, persist it immediately
+        if (body.record) {
           await db.addAttendanceRecord(body.record);
-          const logs = await db.getAttendance();
-          return sendJson(res, 200, { success: true, count: logs.length, logs });
-        } else if (body.rollNo) {
+        } else if (body.rollNo && !body.logs) {
           await db.addAttendanceRecord(body);
-          const logs = await db.getAttendance();
-          return sendJson(res, 200, { success: true, count: logs.length, logs });
+        }
+
+        // 2. If bulk/sync logs are supplied, upsert them
+        if (body.logs && Array.isArray(body.logs) && body.logs.length > 0) {
+          await db.saveAttendance(body.logs);
         }
 
         const logs = await db.getAttendance();

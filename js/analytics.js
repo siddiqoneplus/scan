@@ -42,7 +42,7 @@ const AttendanceManager = (() => {
   }
 
   /**
-   * Fetch logs from centralized backend server
+   * Fetch logs from centralized backend server (Smart Non-Destructive Merge)
    */
   async function syncFromServer() {
     try {
@@ -50,29 +50,68 @@ const AttendanceManager = (() => {
       if (response.ok) {
         const data = await response.json();
         if (data.success && Array.isArray(data.logs)) {
+          // Smart merge: Never destroy locally scanned records!
+          const recordMap = new Map();
+          
+          // 1. Put server records
+          data.logs.forEach(r => {
+            if (r && (r.id || r.rollNo)) {
+              const key = r.id || `${r.rollNo}_${r.date}_${r.session}`;
+              recordMap.set(key, r);
+            }
+          });
+
+          // 2. Merge local records (keep local if not yet on server)
+          let hadUnsynced = false;
+          logs.forEach(r => {
+            if (r && (r.id || r.rollNo)) {
+              const key = r.id || `${r.rollNo}_${r.date}_${r.session}`;
+              if (!recordMap.has(key)) {
+                recordMap.set(key, r);
+                hadUnsynced = true;
+              }
+            }
+          });
+
+          // Sort by date and timestamp descending
+          const mergedLogs = Array.from(recordMap.values()).sort((a, b) => {
+            const timeA = `${a.date || ''} ${a.timestamp || ''}`;
+            const timeB = `${b.date || ''} ${b.timestamp || ''}`;
+            return timeB.localeCompare(timeA);
+          });
+
           const currentStr = JSON.stringify(logs);
-          const newStr = JSON.stringify(data.logs);
+          const newStr = JSON.stringify(mergedLogs);
           if (currentStr !== newStr) {
-            logs = data.logs;
+            logs = mergedLogs;
             localStorage.setItem(STORAGE_KEY, newStr);
             window.dispatchEvent(new CustomEvent('attendance:updated', { detail: { count: logs.length } }));
+          }
+
+          // If there were local logs that server didn't have, push them up!
+          if (hadUnsynced) {
+            saveLogs(true);
           }
         }
       }
     } catch (e) {
-      // Offline fallback: use local logs
+      // Offline fallback: use local logs safely
     }
   }
 
-  function saveLogs(syncToServer = true) {
+  function saveLogs(syncToServer = true, specificRecord = null) {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(logs));
     window.dispatchEvent(new CustomEvent('attendance:updated', { detail: { count: logs.length } }));
 
     if (syncToServer) {
+      const payload = { logs };
+      if (specificRecord) {
+        payload.record = specificRecord;
+      }
       fetch('/api/attendance', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ logs })
+        body: JSON.stringify(payload)
       }).catch(err => console.warn('Could not sync attendance logs to server:', err));
     }
   }
@@ -129,6 +168,7 @@ const AttendanceManager = (() => {
       name: student.name,
       branch: student.branch,
       year: student.year,
+      section: student.section || '',
       session: sessionName,
       date: today,
       timestamp: now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
@@ -137,7 +177,7 @@ const AttendanceManager = (() => {
     };
 
     logs.unshift(newRecord);
-    saveLogs(true);
+    saveLogs(true, newRecord);
 
     return {
       success: true,
@@ -191,15 +231,18 @@ const AttendanceManager = (() => {
   /**
    * Get filtered logs
    */
-  function getFilteredLogs({ date, branch, year, session, query } = {}) {
+  function getFilteredLogs({ date, branch, year, section, session, query } = {}) {
     return logs.filter(r => {
       if (date && r.date !== date) return false;
       if (branch && branch !== 'ALL' && r.branch !== branch && !r.branch.includes(branch) && !branch.includes(r.branch)) return false;
       if (year && year !== 'ALL' && r.year !== year && !r.year.includes(year) && !year.includes(r.year)) return false;
+      if (section && section !== 'ALL' && (r.section || '').toUpperCase() !== section.toUpperCase()) return false;
       if (session && session !== 'ALL' && r.session !== session) return false;
       if (query) {
         const q = query.toLowerCase().trim();
-        const match = r.rollNo.toLowerCase().includes(q) || r.name.toLowerCase().includes(q);
+        const match = r.rollNo.toLowerCase().includes(q) || 
+                      r.name.toLowerCase().includes(q) || 
+                      (r.section && r.section.toLowerCase().includes(q));
         if (!match) return false;
       }
       return true;
@@ -276,12 +319,13 @@ const AttendanceManager = (() => {
       throw new Error('No attendance records available to export.');
     }
 
-    const headers = ['Roll Number', 'Student Name', 'Branch', 'Year', 'Date', 'Time', 'Session', 'Status', 'Marked By'];
+    const headers = ['Roll Number', 'Student Name', 'Branch', 'Year', 'Section', 'Date', 'Time', 'Session', 'Status', 'Marked By'];
     const rows = dataToExport.map(r => [
       `"${r.rollNo}"`,
       `"${(r.name || '').replace(/"/g, '""')}"`,
       `"${(r.branch || '').replace(/"/g, '""')}"`,
       `"${r.year || ''}"`,
+      `"${r.section || ''}"`,
       `"${r.date || ''}"`,
       `"${r.timestamp || ''}"`,
       `"${(r.session || '').replace(/"/g, '""')}"`,
@@ -440,6 +484,7 @@ const AttendanceManager = (() => {
       { header: 'Student Name', dataKey: 'name' },
       { header: 'Branch', dataKey: 'branch' },
       { header: 'Academic Year', dataKey: 'year' },
+      { header: 'Sec', dataKey: 'section' },
       { header: 'Time', dataKey: 'time' },
       { header: 'Session', dataKey: 'session' },
       { header: 'Status', dataKey: 'status' },
@@ -452,6 +497,7 @@ const AttendanceManager = (() => {
       name: r.name,
       branch: r.branch,
       year: r.year,
+      section: r.section || '-',
       time: r.timestamp || '-',
       session: r.session || sessionName,
       status: 'PRESENT',

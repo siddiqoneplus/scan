@@ -171,47 +171,152 @@ const ScannerEngine = (() => {
   }
 
   /**
+   * Parse arbitrary QR code content to extract roll number and metadata
+   */
+  function parseQrPayload(rawText) {
+    if (!rawText) return { rollNo: '' };
+    let text = rawText.trim();
+    let rollNo = '';
+    let parsedName = '';
+    let parsedBranch = '';
+    let parsedYear = '';
+    let parsedSection = '';
+
+    // Case 1: JSON payload
+    if ((text.startsWith('{') && text.endsWith('}')) || (text.startsWith('[') && text.endsWith(']'))) {
+      try {
+        const obj = JSON.parse(text);
+        const data = Array.isArray(obj) ? obj[0] : obj;
+        if (data && typeof data === 'object') {
+          rollNo = data.rollNo || data.roll_no || data.rollNumber || data.roll || 
+                   data.id || data.studentId || data.student_id || data.regNo || 
+                   data.reg_no || data.pin || data.code || '';
+          parsedName = data.name || data.studentName || data.student_name || '';
+          parsedBranch = data.branch || data.dept || data.department || '';
+          parsedYear = data.year || data.batch || '';
+          parsedSection = data.section || data.sec || data.division || data.div || '';
+        }
+      } catch (e) {}
+    }
+
+    // Case 2: URL with query parameters
+    if (!rollNo && (text.includes('http://') || text.includes('https://') || text.includes('?'))) {
+      try {
+        const urlStr = text.startsWith('http') ? text : `http://localhost/${text}`;
+        const url = new URL(urlStr);
+        rollNo = url.searchParams.get('roll') || 
+                 url.searchParams.get('rollNo') || 
+                 url.searchParams.get('roll_no') || 
+                 url.searchParams.get('id') || 
+                 url.searchParams.get('studentId') || 
+                 url.searchParams.get('code') || '';
+        parsedName = url.searchParams.get('name') || '';
+        parsedSection = url.searchParams.get('sec') || url.searchParams.get('section') || '';
+      } catch (e) {}
+    }
+
+    // Case 3: Multiline or Key-Value text (e.g. "Roll No: 25A81A61B6\nName: John")
+    if (!rollNo && text.includes('\n')) {
+      const lines = text.split('\n');
+      lines.forEach(line => {
+        const parts = line.split(/[:=-]/);
+        if (parts.length >= 2) {
+          const key = parts[0].trim().toLowerCase();
+          const val = parts.slice(1).join(':').trim();
+          if (key.includes('roll') || key.includes('id') || key.includes('reg') || key.includes('pin')) {
+            rollNo = val;
+          } else if (key.includes('name')) {
+            parsedName = val;
+          } else if (key.includes('branch') || key.includes('dept')) {
+            parsedBranch = val;
+          } else if (key.includes('sec') || key.includes('div')) {
+            parsedSection = val;
+          }
+        }
+      });
+    }
+
+    // Case 4: Prefixed string like "ROLL: 24A81A4401" or "ID: 25A81A61B6"
+    if (!rollNo) {
+      const prefixMatch = text.match(/^(?:roll(?:\s*no)?|id|reg(?:\s*no)?|student(?:\s*id)?)\s*[:=-]?\s*(.+)$/i);
+      if (prefixMatch) {
+        rollNo = prefixMatch[1].trim();
+      } else {
+        rollNo = text;
+      }
+    }
+
+    // Clean up roll number
+    rollNo = (rollNo || '')
+      .replace(/^["'`]|["'`]$/g, '') // remove surrounding quotes
+      .replace(/[;,\.]+$/, '')       // remove trailing punctuation
+      .trim()
+      .toUpperCase();
+
+    return {
+      rollNo,
+      name: parsedName.trim(),
+      branch: parsedBranch.trim(),
+      year: parsedYear.trim(),
+      section: parsedSection.trim().toUpperCase()
+    };
+  }
+
+  /**
    * Main roll number validation and attendance registration pipeline
    */
   function processRollNumber(inputRollNumber) {
     const activeSession = document.getElementById('activeSessionSelect')?.value || 'Morning Lecture';
     
-    // Normalize roll number: extract roll number if text contains JSON or URL or prefix
-    let rollNo = inputRollNumber.trim().toUpperCase();
+    // Parse QR payload with maximum format flexibility
+    const parsed = parseQrPayload(inputRollNumber);
+    const rollNo = parsed.rollNo;
 
-    // If QR contains JSON like {"rollNo": "21B91A0501"}
-    if (rollNo.startsWith('{') && rollNo.endsWith('}')) {
-      try {
-        const parsed = JSON.parse(rollNo);
-        rollNo = (parsed.rollNo || parsed.roll || parsed.id || rollNo).trim().toUpperCase();
-      } catch (e) {
-        // Not valid JSON, keep as is
-      }
-    }
-
-    // If QR contains a URL with roll number parameter
-    if (rollNo.includes('?roll=')) {
-      try {
-        const url = new URL(rollNo);
-        rollNo = (url.searchParams.get('roll') || rollNo).trim().toUpperCase();
-      } catch (e) {}
-    }
-
-    // 1. Check if the Roll Number is Whitelisted/Assigned by Admin
-    const student = RosterManager.findStudent(rollNo);
-
-    if (!student) {
-      // REJECT: Not registered by admin
+    if (!rollNo) {
       playSound('error');
-      showResultBanner({
-        type: 'error',
-        title: 'UNAUTHORIZED ROLL NUMBER',
-        message: `Roll Number "${rollNo}" is NOT assigned by Admin. Unregistered QR codes cannot mark attendance.`,
-        rollNo: rollNo,
-        student: null
-      });
-      App.showToast(`Rejected: Roll Number ${rollNo} not found in Admin list`, 'error');
+      App.showToast('Invalid QR Code: Could not read student roll number', 'error');
       return;
+    }
+
+    // 1. Check if the Roll Number is in the Roster / Whitelist
+    let student = RosterManager.findStudent(rollNo);
+
+    // If student is NOT pre-registered in roster, AUTO-REGISTER so attendance is never rejected or lost!
+    if (!student) {
+      const classification = RosterManager.autoClassifyRollNumber(rollNo);
+      const studentName = parsed.name || `Student ${rollNo}`;
+      const studentBranch = parsed.branch || classification.branch;
+      const studentYear = parsed.year || classification.year;
+      const studentSection = parsed.section || '';
+
+      try {
+        student = RosterManager.addStudent({
+          rollNo: rollNo,
+          name: studentName,
+          branch: studentBranch,
+          year: studentYear,
+          section: studentSection,
+          assignedTo: 'all'
+        });
+        App.showToast(`Auto-registered: ${student.name} (${student.rollNo})`, 'info');
+      } catch (e) {
+        student = RosterManager.findStudent(rollNo) || {
+          rollNo: rollNo,
+          name: studentName,
+          branch: studentBranch,
+          year: studentYear,
+          section: studentSection,
+          assignedTo: 'all'
+        };
+      }
+    } else {
+      // If student was already in roster but QR code provides a section and roster had none, update section
+      if (parsed.section && !student.section) {
+        try {
+          RosterManager.updateStudent(student.rollNo, { section: parsed.section });
+          student.section = parsed.section;
+        } catch (e) {}
+      }
     }
 
     // Check if assigned to current employee (if logged in as employee)
@@ -219,50 +324,52 @@ const ScannerEngine = (() => {
     if (currentSession && currentSession.role === 'employee') {
       const isAssigned = RosterManager.isRollNumberAssigned(rollNo, currentSession.username, currentSession.role);
       if (!isAssigned) {
-        playSound('error');
-        showResultBanner({
-          type: 'error',
-          title: 'STUDENT NOT ASSIGNED TO YOU',
-          message: `Student "${student.name}" (${rollNo}) is in the university whitelist but assigned to another staff member.`,
-          rollNo: rollNo,
-          student: student
-        });
-        App.showToast(`Access Restricted: Student not assigned to your staff account`, 'error');
-        return;
+        // Automatically link student to 'all' so attendance can be taken without locking out staff
+        try {
+          RosterManager.updateStudent(rollNo, { assignedTo: 'all' });
+        } catch (e) {}
       }
     }
 
     // 2. Check if already marked present today for this session
     if (AttendanceManager.isAlreadyMarked(rollNo, activeSession)) {
       playSound('warning');
+      const allLogs = AttendanceManager.getAllLogs();
+      const existing = allLogs.find(r => r.rollNo.toUpperCase() === rollNo.toUpperCase() && r.session === activeSession);
       showResultBanner({
         type: 'warning',
-        title: 'ALREADY MARKED TODAY',
-        message: `${student.name} (${student.rollNo}) has already checked in for "${activeSession}".`,
+        title: 'ALREADY MARKED PRESENT',
+        message: `${student.name} (${student.rollNo}) is already safely checked in for "${activeSession}" today at ${existing?.timestamp || 'earlier'}.`,
         rollNo: rollNo,
-        student: student
+        student: student,
+        record: existing
       });
       App.showToast(`Already Marked: ${student.name} is present`, 'warning');
       return;
     }
 
-    // 3. Mark Attendance Successfully!
+    // 3. Mark Attendance Successfully & Persist Immediately!
     const recordResult = AttendanceManager.recordAttendance(student, activeSession);
 
     if (recordResult.success) {
       playSound('success');
       showResultBanner({
         type: 'success',
-        title: 'ATTENDANCE CONFIRMED',
-        message: `Attendance recorded successfully for ${activeSession}!`,
+        title: 'ATTENDANCE CONFIRMED & STORED',
+        message: `Attendance saved to Database & Local Storage for ${activeSession}!`,
         rollNo: rollNo,
         student: student,
         record: recordResult.record
       });
       App.showToast(`Marked Present: ${student.name} (${student.branch})`, 'success');
-      // Defer heavy DOM refreshes & confetti so they don't block the camera decode loop
-      deferRefresh();
+      
+      // Immediately refresh all views (KPIs, ticker, tables) on the spot!
+      if (typeof App !== 'undefined' && App.refreshAllViews) {
+        App.refreshAllViews();
+      }
       requestAnimationFrame(() => triggerConfetti());
+    } else {
+      App.showToast(`Error: ${recordResult.reason || 'Could not record attendance'}`, 'error');
     }
   }
 
@@ -289,7 +396,8 @@ const ScannerEngine = (() => {
             <div class="student-badges">
               <span class="tag tag-branch">${escapeHtml(student.branch.split('(')[1]?.replace(')', '') || student.branch)}</span>
               <span class="tag tag-year">${escapeHtml(student.year)}</span>
-              ${record ? `<span class="tag tag-session">${escapeHtml(record.timestamp)}</span>` : ''}
+              ${student.section ? `<span class="tag tag-section">Sec ${escapeHtml(student.section)}</span>` : ''}
+              ${record ? `<span class="tag tag-session"><i class="fa-solid fa-clock"></i> ${escapeHtml(record.timestamp)}</span>` : ''}
             </div>
           </div>
         </div>

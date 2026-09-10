@@ -472,6 +472,7 @@ const App = (() => {
     const searchInput = document.getElementById('analyticsSearch');
     const branchFilter = document.getElementById('analyticsFilterBranch');
     const yearFilter = document.getElementById('analyticsFilterYear');
+    const sectionFilter = document.getElementById('analyticsFilterSection');
     const dateFilter = document.getElementById('analyticsFilterDate');
 
     const triggerFilter = () => {
@@ -479,6 +480,7 @@ const App = (() => {
         query: searchInput ? searchInput.value : '',
         branch: branchFilter ? branchFilter.value : 'ALL',
         year: yearFilter ? yearFilter.value : 'ALL',
+        section: sectionFilter ? sectionFilter.value : 'ALL',
         date: dateFilter ? dateFilter.value : ''
       });
       renderAttendanceTable(filtered);
@@ -487,6 +489,7 @@ const App = (() => {
     if (searchInput) searchInput.addEventListener('input', triggerFilter);
     if (branchFilter) branchFilter.addEventListener('change', triggerFilter);
     if (yearFilter) yearFilter.addEventListener('change', triggerFilter);
+    if (sectionFilter) sectionFilter.addEventListener('change', triggerFilter);
     if (dateFilter) dateFilter.addEventListener('change', triggerFilter);
   }
 
@@ -501,7 +504,7 @@ const App = (() => {
     if (records.length === 0) {
       tbody.innerHTML = `
         <tr>
-          <td colspan="9" class="empty-placeholder">
+          <td colspan="10" class="empty-placeholder">
             No attendance records logged for this filter.
           </td>
         </tr>
@@ -519,6 +522,7 @@ const App = (() => {
         <td><strong>${escapeHtml(r.name)}</strong></td>
         <td><span class="tag tag-branch">${escapeHtml(r.branch)}</span></td>
         <td><span class="tag tag-year">${escapeHtml(r.year)}</span></td>
+        <td>${r.section ? `<span class="tag tag-section">Sec ${escapeHtml(r.section)}</span>` : '<span class="text-subtle">-</span>'}</td>
         <td class="font-mono text-cyan">${escapeHtml(r.timestamp)}</td>
         <td><span class="tag tag-session">${escapeHtml(r.session)}</span></td>
         <td><span class="tag tag-session"><i class="fa-solid fa-id-badge"></i> ${escapeHtml(r.markedBy || 'Staff Member')}</span></td>
@@ -813,12 +817,14 @@ const App = (() => {
       const query = document.getElementById('analyticsSearch')?.value || '';
       const branch = document.getElementById('analyticsFilterBranch')?.value || 'ALL';
       const year = document.getElementById('analyticsFilterYear')?.value || 'ALL';
+      const section = document.getElementById('analyticsFilterSection')?.value || 'ALL';
       const date = document.getElementById('analyticsFilterDate')?.value || '';
 
       const records = AttendanceManager.getFilteredLogs({
         query,
         branch,
         year,
+        section,
         date: date || null
       });
 
@@ -837,6 +843,7 @@ const App = (() => {
       const query = document.getElementById('analyticsSearch')?.value || '';
       const branch = document.getElementById('analyticsFilterBranch')?.value || 'ALL';
       const year = document.getElementById('analyticsFilterYear')?.value || 'ALL';
+      const section = document.getElementById('analyticsFilterSection')?.value || 'ALL';
       const date = document.getElementById('analyticsFilterDate')?.value || '';
       const activeSession = document.getElementById('activeSessionSelect')?.value || 'Morning Lecture';
 
@@ -844,6 +851,7 @@ const App = (() => {
         query,
         branch,
         year,
+        section,
         date: date || null
       });
 
@@ -855,6 +863,7 @@ const App = (() => {
       const filterDesc = [
         branch !== 'ALL' ? branch : null,
         year !== 'ALL' ? year : null,
+        section !== 'ALL' ? `Sec ${section}` : null,
         query ? `Search: "${query}"` : null,
         date ? date : 'All Dates'
       ].filter(Boolean).join(' • ') || 'All Filtered Records';

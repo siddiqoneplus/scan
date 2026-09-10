@@ -217,6 +217,7 @@ async function saveStudents(studentsList) {
           name: s.name || '',
           branch: s.branch || '',
           year: s.year || '',
+          section: s.section || '',
           assignedTo: s.assignedTo || 'all'
         }));
         await col.insertMany(cleanDocs);
@@ -243,6 +244,7 @@ async function importStudents(incoming, assignedTo = 'all') {
       name: student.name || `Student ${cleanRoll}`,
       branch: student.branch || 'General',
       year: student.year || '2024 Batch (3rd Year)',
+      section: student.section || '',
       assignedTo: student.assignedTo || assignedTo,
       importedAt: new Date().toISOString()
     };
@@ -261,51 +263,105 @@ async function importStudents(incoming, assignedTo = 'all') {
 
 // --- ATTENDANCE ---
 async function getAttendance() {
+  const localDocs = readJsonFile('attendance.json', []);
   if (isConnected && db) {
     try {
       const docs = await db.collection('attendance')
         .find({}, { projection: { _id: 0 } })
         .sort({ date: -1, timestamp: -1 })
         .toArray();
-      writeJsonFile('attendance.json', docs);
-      return docs;
+
+      // Merge Atlas documents with local JSON so nothing is ever dropped
+      const map = new Map();
+      localDocs.forEach(r => { if (r && (r.id || r.rollNo)) map.set(r.id || `${r.rollNo}_${r.date}_${r.session}`, r); });
+      docs.forEach(r => { if (r && (r.id || r.rollNo)) map.set(r.id || `${r.rollNo}_${r.date}_${r.session}`, r); });
+
+      const merged = Array.from(map.values()).sort((a, b) => {
+        const timeA = `${a.date || ''} ${a.timestamp || ''}`;
+        const timeB = `${b.date || ''} ${b.timestamp || ''}`;
+        return timeB.localeCompare(timeA);
+      });
+
+      writeJsonFile('attendance.json', merged);
+      return merged;
     } catch (err) {
       console.warn('[MongoDB Atlas] Read attendance error, fallback to local:', err.message);
     }
   }
-  return readJsonFile('attendance.json', []);
+  return localDocs;
 }
 
 async function saveAttendance(logsList) {
-  writeJsonFile('attendance.json', logsList);
+  if (!Array.isArray(logsList)) return false;
+
+  // Smart merge with existing local JSON so previously saved records are never lost
+  const localDocs = readJsonFile('attendance.json', []);
+  const map = new Map();
+  localDocs.forEach(r => { if (r && (r.id || r.rollNo)) map.set(r.id || `${r.rollNo}_${r.date}_${r.session}`, r); });
+  logsList.forEach(r => { if (r && (r.id || r.rollNo)) map.set(r.id || `${r.rollNo}_${r.date}_${r.session}`, r); });
+
+  const merged = Array.from(map.values()).sort((a, b) => {
+    const timeA = `${a.date || ''} ${a.timestamp || ''}`;
+    const timeB = `${b.date || ''} ${b.timestamp || ''}`;
+    return timeB.localeCompare(timeA);
+  });
+
+  writeJsonFile('attendance.json', merged);
 
   if (isConnected && db) {
     try {
       const col = db.collection('attendance');
-      await col.deleteMany({});
       if (logsList.length > 0) {
-        await col.insertMany(logsList.map(r => ({ ...r })));
+        const ops = logsList.map(r => {
+          const doc = { ...r };
+          delete doc._id;
+          return {
+            updateOne: {
+              filter: { id: r.id },
+              update: { $set: doc },
+              upsert: true
+            }
+          };
+        });
+        await col.bulkWrite(ops, { ordered: false });
       }
       return true;
     } catch (err) {
-      console.warn('[MongoDB Atlas] Replace attendance error:', err.message);
+      console.warn('[MongoDB Atlas] Save attendance bulk upsert note:', err.message);
     }
   }
   return true;
 }
 
 async function addAttendanceRecord(record) {
-  // Read current
-  let logs = await getAttendance();
-  logs.unshift(record);
-  writeJsonFile('attendance.json', logs);
+  if (!record) return false;
+  if (!record.id) {
+    record.id = 'att-' + Date.now() + '-' + Math.random().toString(36).substr(2, 5);
+  }
 
+  // Update local JSON with deduplication
+  let currentLogs = readJsonFile('attendance.json', []);
+  const existingIdx = currentLogs.findIndex(r => r.id === record.id || (r.rollNo === record.rollNo && r.date === record.date && r.session === record.session));
+  if (existingIdx >= 0) {
+    currentLogs[existingIdx] = { ...currentLogs[existingIdx], ...record };
+  } else {
+    currentLogs.unshift(record);
+  }
+  writeJsonFile('attendance.json', currentLogs);
+
+  // Atomically upsert into MongoDB Atlas
   if (isConnected && db) {
     try {
-      await db.collection('attendance').insertOne({ ...record });
+      const doc = { ...record };
+      delete doc._id;
+      await db.collection('attendance').updateOne(
+        { id: record.id },
+        { $set: doc },
+        { upsert: true }
+      );
       return true;
     } catch (err) {
-      console.warn('[MongoDB Atlas] Add record error:', err.message);
+      console.warn('[MongoDB Atlas] Add attendance record error:', err.message);
     }
   }
   return true;
