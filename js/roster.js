@@ -98,7 +98,7 @@ const RosterManager = (() => {
   }
 
   /**
-   * Sync roster data with centralized backend server (Smart Non-Destructive Merge)
+   * Sync roster data from centralized backend server (Server is Single Source of Truth)
    */
   async function syncFromServer() {
     if (isClearing) return;
@@ -113,59 +113,18 @@ const RosterManager = (() => {
         const data = await response.json();
         if (isClearing) return;
         if (data.success && Array.isArray(data.students)) {
-          // If server was intentionally cleared (0 students), synchronize local state to 0
-          if (data.students.length === 0) {
-            if (students.length > 0) {
-              students = [];
-              localStorage.setItem(STORAGE_KEY, '[]');
-              window.dispatchEvent(new CustomEvent('roster:updated', { detail: { count: 0 } }));
-            }
-            return;
-          }
+          const serverStudents = data.students.map(s => ({
+            ...s,
+            section: s.section || '',
+            assignedTo: s.assignedTo || 'all'
+          }));
 
-          const studentMap = new Map();
-
-          // 1. Server students
-          data.students.forEach(s => {
-            if (s && s.rollNo) {
-              const clean = s.rollNo.trim().toUpperCase();
-              studentMap.set(clean, {
-                ...s,
-                section: s.section || '',
-                assignedTo: s.assignedTo || 'all'
-              });
-            }
-          });
-
-          // 2. Merge local students (never drop locally added students unless server explicitly wiped)
-          let hadUnsynced = false;
-          students.forEach(s => {
-            if (s && s.rollNo) {
-              const clean = s.rollNo.trim().toUpperCase();
-              if (!studentMap.has(clean)) {
-                studentMap.set(clean, s);
-                hadUnsynced = true;
-              } else {
-                // If local has section and server doesn't, preserve local section
-                const existing = studentMap.get(clean);
-                if (s.section && !existing.section) {
-                  existing.section = s.section;
-                }
-              }
-            }
-          });
-
-          const mergedStudents = Array.from(studentMap.values());
           const currentStr = JSON.stringify(students);
-          const newStr = JSON.stringify(mergedStudents);
+          const newStr = JSON.stringify(serverStudents);
           if (currentStr !== newStr) {
-            students = mergedStudents;
+            students = serverStudents;
             localStorage.setItem(STORAGE_KEY, newStr);
             window.dispatchEvent(new CustomEvent('roster:updated', { detail: { count: students.length } }));
-          }
-
-          if (hadUnsynced && !isClearing) {
-            saveStudents(true);
           }
         }
       }

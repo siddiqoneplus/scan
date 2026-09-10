@@ -44,7 +44,7 @@ const AttendanceManager = (() => {
   }
 
   /**
-   * Fetch logs from centralized backend server (Smart Non-Destructive Merge)
+   * Fetch logs from centralized backend server (Server is Single Source of Truth)
    */
   async function syncFromServer() {
     if (isClearing) return;
@@ -59,62 +59,18 @@ const AttendanceManager = (() => {
         const data = await response.json();
         if (isClearing) return;
         if (data.success && Array.isArray(data.logs)) {
-          // If server was intentionally cleared (0 logs), synchronize local state to 0
-          if (data.logs.length === 0) {
-            if (logs.length > 0) {
-              logs = [];
-              localStorage.setItem(STORAGE_KEY, '[]');
-              window.dispatchEvent(new CustomEvent('attendance:updated', { detail: { count: 0 } }));
-            }
-            return;
-          }
-
-          // Smart merge: Never destroy locally scanned records!
-          const recordMap = new Map();
-          
-          // 1. Put server records
-          data.logs.forEach(r => {
-            if (r && (r.id || r.rollNo)) {
-              const key = r.id || `${r.rollNo}_${r.date}_${r.session}`;
-              recordMap.set(key, r);
-            }
-          });
-
-          // 2. Merge local records (keep local if not yet on server)
-          let hadUnsynced = false;
-          logs.forEach(r => {
-            if (r && (r.id || r.rollNo)) {
-              const key = r.id || `${r.rollNo}_${r.date}_${r.session}`;
-              if (!recordMap.has(key)) {
-                recordMap.set(key, r);
-                hadUnsynced = true;
-              }
-            }
-          });
-
-          // Sort by date and timestamp descending
-          const mergedLogs = Array.from(recordMap.values()).sort((a, b) => {
-            const timeA = `${a.date || ''} ${a.timestamp || ''}`;
-            const timeB = `${b.date || ''} ${b.timestamp || ''}`;
-            return timeB.localeCompare(timeA);
-          });
-
+          const serverLogs = data.logs;
           const currentStr = JSON.stringify(logs);
-          const newStr = JSON.stringify(mergedLogs);
+          const newStr = JSON.stringify(serverLogs);
           if (currentStr !== newStr) {
-            logs = mergedLogs;
+            logs = serverLogs;
             localStorage.setItem(STORAGE_KEY, newStr);
             window.dispatchEvent(new CustomEvent('attendance:updated', { detail: { count: logs.length } }));
-          }
-
-          // If there were local logs that server didn't have, push them up!
-          if (hadUnsynced && !isClearing) {
-            saveLogs(true);
           }
         }
       }
     } catch (e) {
-      // Offline fallback or aborted
+      // Offline fallback or aborted: retain current local logs
     }
   }
 
