@@ -247,7 +247,7 @@ const RosterManager = (() => {
   /**
    * Add a new student
    */
-  function addStudent({ rollNo, name, branch, year, assignedTo = 'all' }) {
+  function addStudent({ rollNo, name, branch, year, section = '', assignedTo = 'all' }) {
     if (!rollNo || !name) throw new Error('Roll Number and Name are required.');
     const cleanRoll = rollNo.trim().toUpperCase();
     
@@ -261,6 +261,7 @@ const RosterManager = (() => {
       name: name.trim(),
       branch: branch && branch.trim() !== '' ? branch.trim() : classification.branch,
       year: year && year.trim() !== '' ? year.trim() : classification.year,
+      section: section ? section.trim().toUpperCase() : '',
       assignedTo: assignedTo && assignedTo.trim() !== '' ? assignedTo.trim() : 'all',
       addedAt: new Date().toISOString()
     };
@@ -351,6 +352,7 @@ const RosterManager = (() => {
     let nameIndex = headers.findIndex(h => h.includes('name') || h.includes('student'));
     let branchIndex = headers.findIndex(h => h.includes('branch') || h.includes('dept') || h.includes('department'));
     let yearIndex = headers.findIndex(h => h.includes('year') || h.includes('sem') || h.includes('class'));
+    let sectionIndex = headers.findIndex(h => h.includes('section') || h.includes('division') || h.includes('div'));
 
     if (rollIndex === -1) {
       rollIndex = 1 < headers.length ? 1 : 0;
@@ -380,6 +382,7 @@ const RosterManager = (() => {
       const auto = autoClassifyRollNumber(rawRoll);
       const branch = (branchIndex !== -1 && cols[branchIndex]) ? cols[branchIndex].trim() : auto.branch;
       const year = (yearIndex !== -1 && cols[yearIndex]) ? cols[yearIndex].trim() : auto.year;
+      const section = (sectionIndex !== -1 && cols[sectionIndex]) ? cols[sectionIndex].trim().toUpperCase() : '';
       const name = rawName || `Student ${rawRoll}`;
 
       const studentItem = {
@@ -387,6 +390,7 @@ const RosterManager = (() => {
         name,
         branch,
         year,
+        section,
         assignedTo: targetAssignment,
         importedAt: new Date().toISOString()
       };
@@ -444,7 +448,7 @@ const RosterManager = (() => {
     const today = (typeof AttendanceManager !== 'undefined') ? AttendanceManager.getTodayDateStr() : '';
     const activeSession = document.getElementById('activeSessionSelect')?.value || 'Morning Lecture';
 
-    const headers = ['Roll Number', 'Student Name', 'Branch', 'Academic Year', 'Assigned To', 'Today Status'];
+    const headers = ['Roll Number', 'Student Name', 'Branch', 'Section', 'Academic Year', 'Assigned To', 'Today Status'];
     const rows = students.map(s => {
       const isPresent = (typeof AttendanceManager !== 'undefined') ? AttendanceManager.isAlreadyMarked(s.rollNo, activeSession) : false;
       const assignedLabel = s.assignedTo === 'all' || !s.assignedTo ? 'All Employees' : s.assignedTo;
@@ -452,6 +456,7 @@ const RosterManager = (() => {
         `"${s.rollNo}"`,
         `"${s.name.replace(/"/g, '""')}"`,
         `"${s.branch.replace(/"/g, '""')}"`,
+        `"${(s.section || '').replace(/"/g, '""')}"`,
         `"${s.year.replace(/"/g, '""')}"`,
         `"${assignedLabel.replace(/"/g, '""')}"`,
         `"${isPresent ? 'Present' : 'Absent'}"`

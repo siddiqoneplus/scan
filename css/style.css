@@ -973,6 +973,13 @@ body {
   border: 1px solid rgba(59, 130, 246, 0.3);
 }
 
+.tag-section {
+  background: rgba(244, 114, 182, 0.2);
+  color: #f9a8d4;
+  border: 1px solid rgba(244, 114, 182, 0.3);
+  font-weight: 600;
+}
+
 .tag-year {
   background: rgba(139, 92, 246, 0.2);
   color: #c4b5fd;
@@ -1094,6 +1101,10 @@ body {
 
 .text-cyan {
   color: var(--cyan);
+}
+
+.text-purple {
+  color: #c084fc;
 }
 
 .font-semibold {

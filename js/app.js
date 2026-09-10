@@ -357,13 +357,15 @@ const App = (() => {
     const branchFilter = document.getElementById('rosterFilterBranch');
     const yearFilter = document.getElementById('rosterFilterYear');
     const assignedFilter = document.getElementById('rosterFilterAssigned');
+    const sectionFilter = document.getElementById('rosterFilterSection');
 
     const triggerFilter = () => {
       renderRosterTable(
         searchInput ? searchInput.value : '',
         branchFilter ? branchFilter.value : 'ALL',
         yearFilter ? yearFilter.value : 'ALL',
-        assignedFilter ? assignedFilter.value : 'ALL'
+        assignedFilter ? assignedFilter.value : 'ALL',
+        sectionFilter ? sectionFilter.value : 'ALL'
       );
     };
 
@@ -371,9 +373,10 @@ const App = (() => {
     if (branchFilter) branchFilter.addEventListener('change', triggerFilter);
     if (yearFilter) yearFilter.addEventListener('change', triggerFilter);
     if (assignedFilter) assignedFilter.addEventListener('change', triggerFilter);
+    if (sectionFilter) sectionFilter.addEventListener('change', triggerFilter);
   }
 
-  function renderRosterTable(query = null, branch = null, year = null, assigned = null) {
+  function renderRosterTable(query = null, branch = null, year = null, assigned = null, section = null) {
     const tbody = document.getElementById('rosterTableBody');
     if (!tbody) return;
 
@@ -381,6 +384,7 @@ const App = (() => {
     const b = branch !== null ? branch : (document.getElementById('rosterFilterBranch')?.value || 'ALL');
     const y = year !== null ? year : (document.getElementById('rosterFilterYear')?.value || 'ALL');
     const a = assigned !== null ? assigned : (document.getElementById('rosterFilterAssigned')?.value || 'ALL');
+    const sec = section !== null ? section : (document.getElementById('rosterFilterSection')?.value || 'ALL');
 
     const session = AuthManager.getSession();
     const isAdmin = AuthManager.isAdmin();
@@ -392,6 +396,7 @@ const App = (() => {
       if (b !== 'ALL' && s.branch !== b && !s.branch.includes(b) && !b.includes(s.branch)) return false;
       if (y !== 'ALL' && s.year !== y && !s.year.includes(y) && !y.includes(s.year)) return false;
       if (a !== 'ALL' && (s.assignedTo || 'all').toLowerCase() !== a.toLowerCase()) return false;
+      if (sec !== 'ALL' && (s.section || '').toUpperCase() !== sec.toUpperCase()) return false;
       if (q && !s.rollNo.toLowerCase().includes(q) && !s.name.toLowerCase().includes(q)) return false;
       return true;
     });
@@ -399,7 +404,7 @@ const App = (() => {
     if (students.length === 0) {
       tbody.innerHTML = `
         <tr>
-          <td colspan="8" class="empty-placeholder" style="padding: 2.5rem 1rem; text-align: center;">
+          <td colspan="9" class="empty-placeholder" style="padding: 2.5rem 1rem; text-align: center;">
             <i class="fa-solid fa-folder-open" style="font-size: 2rem; opacity: 0.35; display: block; margin-bottom: 0.6rem;"></i>
             No student records found in whitelist. Use <strong>"Add Student"</strong> or <strong>"Import CSV"</strong> above to register students.
           </td>
@@ -414,12 +419,14 @@ const App = (() => {
     tbody.innerHTML = students.map((s, idx) => {
       const isPresent = AttendanceManager.isAlreadyMarked(s.rollNo, activeSession);
       const isSharedAll = !s.assignedTo || s.assignedTo === 'all';
+      const sectionLabel = s.section ? s.section : '—';
       return `
         <tr>
           <td class="text-subtle col-w-50">${idx + 1}</td>
           <td class="font-mono font-semibold text-white">${escapeHtml(s.rollNo)}</td>
           <td><strong>${escapeHtml(s.name)}</strong></td>
           <td><span class="tag tag-branch">${escapeHtml(s.branch)}</span></td>
+          <td><span class="tag tag-section">${escapeHtml(sectionLabel)}</span></td>
           <td><span class="tag tag-year">${escapeHtml(s.year)}</span></td>
           <td>
             ${isSharedAll 
@@ -574,10 +581,11 @@ const App = (() => {
     const name = document.getElementById('newStudentName')?.value;
     const branch = document.getElementById('newStudentBranch')?.value;
     const year = document.getElementById('newStudentYear')?.value;
+    const section = document.getElementById('newStudentSection')?.value || '';
     const assignedTo = document.getElementById('newStudentAssignedTo')?.value || 'all';
 
     try {
-      RosterManager.addStudent({ rollNo, name, branch, year, assignedTo });
+      RosterManager.addStudent({ rollNo, name, branch, year, section, assignedTo });
       closeModal('modalAddStudent');
       const assignLabel = assignedTo === 'all' ? 'All Employees' : assignedTo;
       showToast(`Student ${rollNo} registered & assigned to ${assignLabel}!`, 'success');
@@ -635,12 +643,14 @@ const App = (() => {
     const nameInput = document.getElementById('editStudentName');
     const branchInput = document.getElementById('editStudentBranch');
     const yearInput = document.getElementById('editStudentYear');
+    const sectionInput = document.getElementById('editStudentSection');
     const assignedInput = document.getElementById('editStudentAssignedTo');
 
     if (rollInput) rollInput.value = student.rollNo;
     if (nameInput) nameInput.value = student.name;
     if (branchInput) branchInput.value = student.branch;
     if (yearInput) yearInput.value = student.year;
+    if (sectionInput) sectionInput.value = student.section || '';
     if (assignedInput) assignedInput.value = student.assignedTo || 'all';
 
     openModal('modalEditStudent');
@@ -652,10 +662,11 @@ const App = (() => {
     const name = document.getElementById('editStudentName')?.value;
     const branch = document.getElementById('editStudentBranch')?.value;
     const year = document.getElementById('editStudentYear')?.value;
+    const section = document.getElementById('editStudentSection')?.value || '';
     const assignedTo = document.getElementById('editStudentAssignedTo')?.value || 'all';
 
     try {
-      RosterManager.updateStudent(rollNo, { name, branch, year, assignedTo });
+      RosterManager.updateStudent(rollNo, { name, branch, year, section, assignedTo });
       closeModal('modalEditStudent');
       showToast(`Student ${rollNo} updated successfully!`, 'success');
       refreshAllViews();
