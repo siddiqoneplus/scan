@@ -104,6 +104,16 @@ const RosterManager = (() => {
       if (response.ok) {
         const data = await response.json();
         if (data.success && Array.isArray(data.students)) {
+          // If server was intentionally cleared (0 students), synchronize local state to 0
+          if (data.students.length === 0) {
+            if (students.length > 0) {
+              students = [];
+              localStorage.setItem(STORAGE_KEY, '[]');
+              window.dispatchEvent(new CustomEvent('roster:updated', { detail: { count: 0 } }));
+            }
+            return;
+          }
+
           const studentMap = new Map();
 
           // 1. Server students
@@ -118,7 +128,7 @@ const RosterManager = (() => {
             }
           });
 
-          // 2. Merge local students (never drop locally added students)
+          // 2. Merge local students (never drop locally added students unless server explicitly wiped)
           let hadUnsynced = false;
           students.forEach(s => {
             if (s && s.rollNo) {
@@ -156,16 +166,31 @@ const RosterManager = (() => {
   }
 
   function saveStudents(syncToServer = true) {
+    // Deduplicate students by rollNo before saving to guarantee integrity
+    const map = new Map();
+    students.forEach(s => {
+      if (s && s.rollNo) {
+        const clean = s.rollNo.trim().toUpperCase();
+        map.set(clean, {
+          ...s,
+          rollNo: clean,
+          assignedTo: s.assignedTo || 'all'
+        });
+      }
+    });
+    students = Array.from(map.values());
+
     localStorage.setItem(STORAGE_KEY, JSON.stringify(students));
     window.dispatchEvent(new CustomEvent('roster:updated', { detail: { count: students.length } }));
 
     if (syncToServer) {
-      fetch('/api/roster', {
+      return fetch('/api/roster', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ students })
       }).catch(err => console.warn('Could not sync roster to server:', err));
     }
+    return Promise.resolve();
   }
 
   /**
@@ -448,32 +473,29 @@ const RosterManager = (() => {
       importedCount++;
     }
 
-    // Save locally and sync to server API
-    saveStudents(true);
-
-    // Also explicitly notify backend import endpoint
-    try {
-      await fetch('/api/roster/import', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ students: importedList, assignedTo: targetAssignment })
-      });
-    } catch (err) {
-      console.warn('Server import sync notice:', err);
-    }
+    // Save locally and sync to server API permanently
+    await saveStudents(true);
 
     return { importedCount, skippedCount, total: students.length, assignedTo: targetAssignment };
   }
 
-  function resetToDefault() {
-    students = [];
-    saveStudents(true);
-    return students;
+  async function resetToDefault() {
+    return await clearAll();
   }
 
-  function clearAll() {
+  async function clearAll() {
     students = [];
-    saveStudents(true);
+    localStorage.setItem(STORAGE_KEY, '[]');
+    window.dispatchEvent(new CustomEvent('roster:updated', { detail: { count: 0 } }));
+
+    try {
+      await fetch('/api/roster', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' }
+      });
+    } catch (err) {
+      console.warn('Could not clear roster on server:', err);
+    }
     return [];
   }
 

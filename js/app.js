@@ -703,10 +703,44 @@ const App = (() => {
     }
   }
 
-  function clearAllStudents() {
-    if (confirm('Are you sure you want to CLEAR the entire student whitelist? This cannot be undone.')) {
-      RosterManager.clearAll();
-      showToast('Student whitelist cleared', 'info');
+  async function clearAllStudents() {
+    const confirmed = confirm(
+      '⚠️ WARNING: CLEAR WHITELIST & RESET ALL DATA?\n\n' +
+      'This will erase the complete system data permanently:\n' +
+      ' • Registered Students Whitelist (0 students)\n' +
+      ' • Present Today check-ins (0 present)\n' +
+      ' • Attendance Rate (0%)\n' +
+      ' • Total Scans Logged (0 scans)\n' +
+      ' • All logs from Cloud Database (MongoDB Atlas) & Local Files\n\n' +
+      'Are you sure you want to erase everything?'
+    );
+
+    if (!confirmed) return;
+
+    try {
+      showToast('Erasing whitelist and clearing all attendance data...', 'info');
+
+      // 1. Clear students roster locally & on server
+      await RosterManager.clearAll();
+
+      // 2. Clear attendance logs locally & on server
+      await AttendanceManager.clearAllLogs();
+
+      // 3. Reset scan result banner
+      const banner = document.getElementById('scanResultBanner');
+      if (banner) {
+        banner.style.display = 'none';
+        banner.innerHTML = '';
+        banner.className = 'result-banner';
+      }
+
+      // 4. Force update all KPI cards and views to 0
+      refreshAllViews();
+
+      showToast('Complete data erased: Registered Students, Present Today, Attendance Rate, and Total Scans have been reset to 0.', 'success');
+    } catch (err) {
+      console.error('Error clearing data:', err);
+      showToast('Error during clear: ' + err.message, 'error');
       refreshAllViews();
     }
   }
@@ -798,17 +832,20 @@ const App = (() => {
   }
 
   function resetRosterToDefault() {
-    if (confirm('Are you sure you want to clear all students from the whitelist?')) {
-      RosterManager.clearAll();
-      showToast('Student whitelist cleared', 'info');
-      refreshAllViews();
-    }
+    clearAllStudents();
   }
 
-  function clearAttendanceLogs() {
-    if (confirm('Clear all recorded attendance logs for today?')) {
-      AttendanceManager.clearAllLogs();
-      showToast('Attendance logs cleared', 'info');
+  async function clearAttendanceLogs() {
+    if (confirm('Clear all recorded attendance logs for today? This will reset Present Today, Attendance Rate, and Total Scans Logged to 0.')) {
+      await AttendanceManager.clearAllLogs();
+      const banner = document.getElementById('scanResultBanner');
+      if (banner) {
+        banner.style.display = 'none';
+        banner.innerHTML = '';
+        banner.className = 'result-banner';
+      }
+      refreshAllViews();
+      showToast('Attendance logs cleared. Today metrics reset to 0.', 'info');
     }
   }
 

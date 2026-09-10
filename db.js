@@ -204,22 +204,33 @@ async function getStudents() {
 }
 
 async function saveStudents(studentsList) {
+  // Deduplicate by rollNo to guarantee integrity and avoid MongoDB E11000 duplicate key errors
+  const map = new Map();
+  if (Array.isArray(studentsList)) {
+    studentsList.forEach(s => {
+      if (s && s.rollNo) {
+        const clean = (s.rollNo || '').trim().toUpperCase();
+        map.set(clean, {
+          rollNo: clean,
+          name: s.name || `Student ${clean}`,
+          branch: s.branch || '',
+          year: s.year || '',
+          section: s.section || '',
+          assignedTo: s.assignedTo || 'all'
+        });
+      }
+    });
+  }
+  const cleanDocs = Array.from(map.values());
+
   // Always update local JSON
-  writeJsonFile('roster.json', studentsList);
+  writeJsonFile('roster.json', cleanDocs);
 
   if (isConnected && db) {
     try {
       const col = db.collection('students');
       await col.deleteMany({});
-      if (studentsList.length > 0) {
-        const cleanDocs = studentsList.map(s => ({
-          rollNo: (s.rollNo || '').trim().toUpperCase(),
-          name: s.name || '',
-          branch: s.branch || '',
-          year: s.year || '',
-          section: s.section || '',
-          assignedTo: s.assignedTo || 'all'
-        }));
+      if (cleanDocs.length > 0) {
         await col.insertMany(cleanDocs);
       }
       return true;
@@ -368,10 +379,7 @@ async function addAttendanceRecord(record) {
 }
 
 async function deleteAttendanceRecord(recordId) {
-  let logs = await getAttendance();
-
   if (recordId === 'all') {
-    logs = [];
     writeJsonFile('attendance.json', []);
     if (isConnected && db) {
       try { await db.collection('attendance').deleteMany({}); } catch (e) {}
@@ -379,6 +387,7 @@ async function deleteAttendanceRecord(recordId) {
     return { count: 0, message: 'All logs cleared' };
   }
 
+  let logs = await getAttendance();
   logs = logs.filter(r => r.id !== recordId);
   writeJsonFile('attendance.json', logs);
 

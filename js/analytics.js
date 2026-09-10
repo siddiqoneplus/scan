@@ -50,6 +50,16 @@ const AttendanceManager = (() => {
       if (response.ok) {
         const data = await response.json();
         if (data.success && Array.isArray(data.logs)) {
+          // If server was intentionally cleared (0 logs), synchronize local state to 0
+          if (data.logs.length === 0) {
+            if (logs.length > 0) {
+              logs = [];
+              localStorage.setItem(STORAGE_KEY, '[]');
+              window.dispatchEvent(new CustomEvent('attendance:updated', { detail: { count: 0 } }));
+            }
+            return;
+          }
+
           // Smart merge: Never destroy locally scanned records!
           const recordMap = new Map();
           
@@ -217,15 +227,21 @@ const AttendanceManager = (() => {
   /**
    * Clear all records
    */
-  function clearAllLogs() {
+  async function clearAllLogs() {
     logs = [];
-    saveLogs(false);
+    localStorage.setItem(STORAGE_KEY, '[]');
+    window.dispatchEvent(new CustomEvent('attendance:updated', { detail: { count: 0 } }));
 
-    fetch('/api/attendance', {
-      method: 'DELETE',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id: 'all' })
-    }).catch(err => console.warn('Could not clear logs on server:', err));
+    try {
+      await fetch('/api/attendance', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: 'all' })
+      });
+    } catch (err) {
+      console.warn('Could not clear logs on server:', err);
+    }
+    return [];
   }
 
   /**

@@ -12,5 +12,26 @@
     "displayName": "Staff Member",
     "role": "employee",
     "createdAt": "2026-09-07T19:14:49.155Z"
+  },
+  {
+    "username": "emp1",
+    "password": "emp123",
+    "displayName": "emp1",
+    "role": "employee",
+    "createdAt": "2026-09-10T06:48:41.945Z"
+  },
+  {
+    "username": "emp2",
+    "password": "emp123",
+    "displayName": "emp2",
+    "role": "employee",
+    "createdAt": "2026-09-10T06:48:52.755Z"
+  },
+  {
+    "username": "emp3",
+    "password": "emp123",
+    "displayName": "emp3",
+    "role": "employee",
+    "createdAt": "2026-09-10T06:49:20.566Z"
   }
 ]
