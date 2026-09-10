@@ -12,6 +12,7 @@ const ScannerEngine = (() => {
   let lastScanTime = 0;
   const SCAN_COOLDOWN_MS = 2500; // Cooldown between scanning same code
   let soundEnabled = true;
+  let refreshTimer = null; // debounce timer for heavy DOM refreshes
 
   // Web Audio Context for zero-latency synthesized sound effects
   let audioCtx = null;
@@ -103,9 +104,10 @@ const ScannerEngine = (() => {
       currentCameraId = selectedCamera.id;
 
       const config = {
-        fps: 15,
-        qrbox: { width: 250, height: 250 },
-        aspectRatio: 1.0
+        fps: 30,
+        qrbox: { width: 200, height: 200 },
+        disableFlip: true,
+        experimentalFeatures: { useBarCodeDetectorIfSupported: true }
       };
 
       await html5QrCode.start(
@@ -249,7 +251,6 @@ const ScannerEngine = (() => {
 
     if (recordResult.success) {
       playSound('success');
-      triggerConfetti();
       showResultBanner({
         type: 'success',
         title: 'ATTENDANCE CONFIRMED',
@@ -259,7 +260,9 @@ const ScannerEngine = (() => {
         record: recordResult.record
       });
       App.showToast(`Marked Present: ${student.name} (${student.branch})`, 'success');
-      App.refreshAllViews();
+      // Defer heavy DOM refreshes & confetti so they don't block the camera decode loop
+      deferRefresh();
+      requestAnimationFrame(() => triggerConfetti());
     }
   }
 
@@ -357,12 +360,27 @@ const ScannerEngine = (() => {
   function triggerConfetti() {
     if (typeof confetti === 'function') {
       confetti({
-        particleCount: 50,
-        spread: 60,
+        particleCount: 30,
+        spread: 50,
         origin: { y: 0.7 },
-        colors: ['#10b981', '#06b6d4', '#3b82f6']
+        colors: ['#10b981', '#06b6d4', '#3b82f6'],
+        disableForReducedMotion: true
       });
     }
+  }
+
+  /**
+   * Debounced refresh – collapses rapid successive scans into one DOM update
+   * so the camera feed stays smooth.
+   */
+  function deferRefresh() {
+    if (refreshTimer) clearTimeout(refreshTimer);
+    refreshTimer = setTimeout(() => {
+      if (typeof App !== 'undefined' && App.refreshAllViews) {
+        App.refreshAllViews();
+      }
+      refreshTimer = null;
+    }, 300);
   }
 
   function toggleSound() {

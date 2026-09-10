@@ -515,6 +515,8 @@ body {
   height: 100% !important;
   object-fit: cover !important;
   border-radius: var(--radius-lg);
+  will-change: contents;
+  contain: strict;
 }
 
 /* Custom Holographic Scan Overlay */
@@ -591,6 +593,8 @@ body {
   background: linear-gradient(90deg, transparent, var(--emerald) 20%, #6ee7b7 50%, var(--emerald) 80%, transparent);
   box-shadow: 0 0 16px 2px var(--emerald);
   animation: scan-move 2.4s ease-in-out infinite alternate;
+  will-change: top, opacity;
+  contain: layout style;
 }
 
 @keyframes scan-move {
@@ -604,10 +608,8 @@ body {
   bottom: 1.25rem;
   left: 50%;
   transform: translateX(-50%);
-  background: rgba(10, 13, 20, 0.85);
+  background: rgba(10, 13, 20, 0.9);
   border: 1px solid rgba(255, 255, 255, 0.15);
-  -webkit-backdrop-filter: blur(8px);
-  backdrop-filter: blur(8px);
   padding: 0.4rem 1.1rem;
   border-radius: var(--radius-full);
   font-size: 0.78rem;
