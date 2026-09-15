@@ -418,7 +418,7 @@ const App = (() => {
     }
 
     const today = AttendanceManager.getTodayDateStr();
-    const activeSession = document.getElementById('activeSessionSelect')?.value || 'Morning Lecture';
+    const activeSession = 'Attendance';
 
     tbody.innerHTML = students.map((s, idx) => {
       const isPresent = AttendanceManager.isAlreadyMarked(s.rollNo, activeSession);
@@ -528,7 +528,6 @@ const App = (() => {
         <td><span class="tag tag-year">${escapeHtml(r.year)}</span></td>
         <td>${r.section ? `<span class="tag tag-section">Sec ${escapeHtml(r.section)}</span>` : '<span class="text-subtle">-</span>'}</td>
         <td class="font-mono text-cyan">${escapeHtml(r.timestamp)}</td>
-        <td><span class="tag tag-session">${escapeHtml(r.session)}</span></td>
         <td><span class="tag tag-session"><i class="fa-solid fa-id-badge"></i> ${escapeHtml(r.markedBy || 'Staff Member')}</span></td>
         <td class="text-right ${isAdmin ? '' : 'admin-only-el'}">
           ${isAdmin ? `<button class="btn btn-danger btn-sm" onclick="App.deleteRecord('${r.id}')" title="Delete record">
@@ -566,12 +565,7 @@ const App = (() => {
       }
       if (modalId === 'modalExportPresent') {
         const todaySpan = document.getElementById('modalExportTodayDate');
-        const sessionSpan = document.getElementById('modalExportActiveSession');
         if (todaySpan) todaySpan.textContent = AttendanceManager.getTodayDateStr();
-        if (sessionSpan) {
-          const session = document.getElementById('activeSessionSelect')?.value || 'Morning Lecture';
-          sessionSpan.textContent = session;
-        }
       }
     }
   }
@@ -684,7 +678,7 @@ const App = (() => {
   }
 
   function toggleStudentAttendance(rollNo) {
-    const activeSession = document.getElementById('activeSessionSelect')?.value || 'Morning Lecture';
+    const activeSession = 'Attendance';
     if (AttendanceManager.isAlreadyMarked(rollNo, activeSession)) {
       AttendanceManager.removeAttendanceForStudent(rollNo, activeSession);
       showToast(`Marked Absent: ${rollNo}`, 'info');
@@ -894,7 +888,7 @@ const App = (() => {
       const year = document.getElementById('analyticsFilterYear')?.value || 'ALL';
       const section = document.getElementById('analyticsFilterSection')?.value || 'ALL';
       const date = document.getElementById('analyticsFilterDate')?.value || '';
-      const activeSession = document.getElementById('activeSessionSelect')?.value || 'Morning Lecture';
+      const activeSession = 'Attendance';
 
       const records = AttendanceManager.getFilteredLogs({
         query,
@@ -938,7 +932,7 @@ const App = (() => {
   function exportPresentTodayPDF() {
     try {
       const today = AttendanceManager.getTodayDateStr();
-      const activeSession = document.getElementById('activeSessionSelect')?.value || 'Morning Lecture';
+      const activeSession = 'Attendance';
       const records = AttendanceManager.getFilteredLogs({ date: today });
 
       if (records.length === 0) {
@@ -969,9 +963,9 @@ const App = (() => {
   function exportPresentStudentsPDF() {
     try {
       const today = AttendanceManager.getTodayDateStr();
-      const activeSession = document.getElementById('activeSessionSelect')?.value || 'Morning Lecture';
+      const activeSession = 'Attendance';
       
-      let records = AttendanceManager.getFilteredLogs({ date: today, session: activeSession });
+      let records = AttendanceManager.getFilteredLogs({ date: today });
       if (records.length === 0) {
         records = AttendanceManager.getFilteredLogs({ date: today });
       }
@@ -1012,7 +1006,7 @@ const App = (() => {
       const includeSummary = document.getElementById('exportIncludeSummary')?.checked ?? true;
 
       const today = AttendanceManager.getTodayDateStr();
-      const activeSession = document.getElementById('activeSessionSelect')?.value || 'Morning Lecture';
+      const activeSession = 'Attendance';
 
       let records = [];
       let title = 'Present Students Attendance Report';
@@ -1023,10 +1017,6 @@ const App = (() => {
         records = AttendanceManager.getFilteredLogs({ date: today });
         title = "Today's Present Students Report";
         filterDesc = `Today (${today}) Check-ins`;
-      } else if (scope === 'session') {
-        records = AttendanceManager.getFilteredLogs({ date: today, session: activeSession });
-        title = `Present Students — ${activeSession}`;
-        filterDesc = `Active Session: ${activeSession} on ${today}`;
       } else if (scope === 'filtered') {
         const query = document.getElementById('analyticsSearch')?.value || '';
         const branch = document.getElementById('analyticsFilterBranch')?.value || 'ALL';

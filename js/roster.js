@@ -483,7 +483,7 @@ const RosterManager = (() => {
       throw new Error('No students in whitelist to export.');
     }
     const today = (typeof AttendanceManager !== 'undefined') ? AttendanceManager.getTodayDateStr() : '';
-    const activeSession = document.getElementById('activeSessionSelect')?.value || 'Morning Lecture';
+    const activeSession = 'Attendance';
 
     const headers = ['Roll Number', 'Student Name', 'Branch', 'Section', 'Academic Year', 'Assigned To', 'Today Status'];
     const rows = students.map(s => {

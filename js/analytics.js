@@ -115,7 +115,7 @@ const AttendanceManager = (() => {
   /**
    * Record new attendance
    */
-  function recordAttendance(student, sessionName = 'Morning Lecture') {
+  function recordAttendance(student, sessionName = 'Attendance') {
     if (!student || !student.rollNo) {
       return { success: false, reason: 'Invalid student profile' };
     }
@@ -129,7 +129,7 @@ const AttendanceManager = (() => {
         success: false,
         isDuplicate: true,
         record: existing,
-        reason: `Student ${cleanRoll} is already marked Present for ${sessionName} today at ${existing.timestamp}.`
+        reason: `Student ${cleanRoll} is already marked Present today at ${existing.timestamp}.`
       };
     }
 
@@ -307,7 +307,7 @@ const AttendanceManager = (() => {
       throw new Error('No attendance records available to export.');
     }
 
-    const headers = ['Roll Number', 'Student Name', 'Branch', 'Year', 'Section', 'Date', 'Time', 'Session', 'Status', 'Marked By'];
+    const headers = ['Roll Number', 'Student Name', 'Branch', 'Year', 'Section', 'Date', 'Time', 'Status', 'Marked By'];
     const rows = dataToExport.map(r => [
       `"${r.rollNo}"`,
       `"${(r.name || '').replace(/"/g, '""')}"`,
@@ -316,7 +316,6 @@ const AttendanceManager = (() => {
       `"${r.section || ''}"`,
       `"${r.date || ''}"`,
       `"${r.timestamp || ''}"`,
-      `"${(r.session || '').replace(/"/g, '""')}"`,
       `"${r.status || 'Present'}"`,
       `"${(r.markedBy || 'Staff Member').replace(/"/g, '""')}"`
     ]);
@@ -351,7 +350,7 @@ const AttendanceManager = (() => {
     const {
       title = 'PRESENT STUDENTS ATTENDANCE REPORT',
       dateStr = getTodayDateStr(),
-      sessionName = 'All Sessions',
+      sessionName = 'Attendance',
       filterDesc = 'All Records',
       includeSummary = true,
       adminName = (typeof AuthManager !== 'undefined' && AuthManager.getSession()?.displayName) || 'Administrator'
@@ -462,7 +461,7 @@ const AttendanceManager = (() => {
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(8.5);
     doc.setTextColor(51, 65, 85);
-    doc.text(`Active Session: ${sessionName}   |   Scope: ${filterDesc}   |   Attendees Count: ${dataToExport.length}`, margin, currentY);
+    doc.text(`Scope: ${filterDesc}   |   Attendees Count: ${dataToExport.length}`, margin, currentY);
     currentY += 4;
 
     // 4. Attendance Table via autoTable
@@ -474,7 +473,6 @@ const AttendanceManager = (() => {
       { header: 'Academic Year', dataKey: 'year' },
       { header: 'Sec', dataKey: 'section' },
       { header: 'Time', dataKey: 'time' },
-      { header: 'Session', dataKey: 'session' },
       { header: 'Status', dataKey: 'status' },
       { header: 'Verified By', dataKey: 'markedBy' }
     ];
@@ -487,7 +485,6 @@ const AttendanceManager = (() => {
       year: r.year,
       section: r.section || '-',
       time: r.timestamp || '-',
-      session: r.session || sessionName,
       status: 'PRESENT',
       markedBy: r.markedBy || 'Staff Member'
     }));
@@ -561,7 +558,7 @@ const AttendanceManager = (() => {
     const {
       title = 'Present Students Attendance Report',
       dateStr = getTodayDateStr(),
-      sessionName = 'All Sessions',
+      sessionName = 'Attendance',
       adminName = (typeof AuthManager !== 'undefined' && AuthManager.getSession()?.displayName) || 'Administrator'
     } = options;
 
@@ -578,7 +575,6 @@ const AttendanceManager = (() => {
         <td>${r.branch}</td>
         <td>${r.year}</td>
         <td style="text-align:center;">${r.timestamp || '-'}</td>
-        <td>${r.session || sessionName}</td>
         <td style="text-align:center; color:#059669; font-weight:bold;">PRESENT</td>
         <td>${r.markedBy || 'Staff Member'}</td>
       </tr>
@@ -618,7 +614,6 @@ const AttendanceManager = (() => {
           </div>
           <div class="meta">
             <div>Date: <strong>${dateStr}</strong></div>
-            <div>Session: <strong>${sessionName}</strong></div>
             <div>Verified by: <strong>${adminName}</strong></div>
           </div>
         </div>
@@ -632,8 +627,8 @@ const AttendanceManager = (() => {
             <div class="lbl">Total Registered</div>
           </div>
           <div class="summary-card">
-            <div class="num">${sessionName}</div>
-            <div class="lbl">Active Session</div>
+            <div class="num">${(typeof RosterManager !== 'undefined' && RosterManager.getAllStudents().length > 0) ? Math.round((dataToExport.length / RosterManager.getAllStudents().length) * 100) + '%' : 'N/A'}</div>
+            <div class="lbl">Attendance Rate</div>
           </div>
         </div>
         <table>
@@ -645,7 +640,6 @@ const AttendanceManager = (() => {
               <th>Branch</th>
               <th>Year</th>
               <th style="text-align:center;">Time</th>
-              <th>Session</th>
               <th style="text-align:center;">Status</th>
               <th>Verified By</th>
             </tr>

@@ -62,15 +62,6 @@
 
     <!-- Session & Audio Header Controls -->
     <div class="header-actions">
-      <div class="session-indicator" title="Active Academic Session">
-        <span class="status-dot"></span>
-        <select id="activeSessionSelect" class="session-select" title="Select Active Lecture Session" aria-label="Select Active Lecture Session" onchange="App.refreshAllViews()">
-          <option value="Morning Lecture">Morning Lecture (09:00 - 10:30)</option>
-          <option value="Afternoon Lab">Afternoon Lab (11:00 - 01:00)</option>
-          <option value="Practical Session">Practical Session (02:00 - 04:00)</option>
-          <option value="Semester Exam">Semester Exam</option>
-        </select>
-      </div>
       <button id="btnToggleSound" class="btn btn-secondary btn-icon" onclick="ScannerEngine.toggleSound()" title="Toggle Sound">
         <i class="fa-solid fa-volume-high"></i>
       </button>
@@ -544,7 +535,6 @@
                 <th>Year</th>
                 <th>Section</th>
                 <th>Check-in Time</th>
-                <th>Session</th>
                 <th>Marked By</th>
                 <th class="text-right admin-only-el">Action</th>
               </tr>
@@ -863,13 +853,7 @@
                   <div class="radio-card-desc">Respects search, branch, year, & date selected in Analytics table</div>
                 </div>
               </label>
-              <label class="radio-card">
-                <input type="radio" name="exportScope" value="session">
-                <div class="radio-card-content">
-                  <div class="radio-card-title"><i class="fa-solid fa-clock text-amber"></i> Active Session Only</div>
-                  <div class="radio-card-desc">Students present in current session (<span id="modalExportActiveSession">Session</span>)</div>
-                </div>
-              </label>
+
               <label class="radio-card">
                 <input type="radio" name="exportScope" value="all">
                 <div class="radio-card-content">

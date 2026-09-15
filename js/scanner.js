@@ -266,7 +266,7 @@ const ScannerEngine = (() => {
    * Main roll number validation and attendance registration pipeline
    */
   function processRollNumber(inputRollNumber) {
-    const activeSession = document.getElementById('activeSessionSelect')?.value || 'Morning Lecture';
+    const activeSession = 'Attendance';
     
     // Parse QR payload with maximum format flexibility
     const parsed = parseQrPayload(inputRollNumber);
@@ -339,7 +339,7 @@ const ScannerEngine = (() => {
       showResultBanner({
         type: 'warning',
         title: 'ALREADY MARKED PRESENT',
-        message: `${student.name} (${student.rollNo}) is already safely checked in for "${activeSession}" today at ${existing?.timestamp || 'earlier'}.`,
+        message: `${student.name} (${student.rollNo}) is already checked in today at ${existing?.timestamp || 'earlier'}.`,
         rollNo: rollNo,
         student: student,
         record: existing
@@ -356,7 +356,7 @@ const ScannerEngine = (() => {
       showResultBanner({
         type: 'success',
         title: 'ATTENDANCE CONFIRMED & STORED',
-        message: `Attendance saved to Database & Local Storage for ${activeSession}!`,
+        message: `Attendance saved to Database & Local Storage!`,
         rollNo: rollNo,
         student: student,
         record: recordResult.record

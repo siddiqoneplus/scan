@@ -1,15 +1,19 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Login | SmartAttendance PRO</title>
-  <meta name="description" content="Secure login portal for SmartAttendance PRO — QR-based student attendance system with role-based access control.">
+  <meta name="description"
+    content="Secure login portal for SmartAttendance PRO — QR-based student attendance system with role-based access control.">
 
   <!-- Google Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link
+    href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Outfit:wght@300;400;500;600;700;800&display=swap"
+    rel="stylesheet">
 
   <!-- FontAwesome Icons -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
@@ -17,6 +21,7 @@
   <!-- Login Styles -->
   <link rel="stylesheet" href="css/login.css">
 </head>
+
 <body>
 
   <!-- Animated Background -->
@@ -66,14 +71,8 @@
           <label for="loginUsername">Username</label>
           <div class="input-wrapper">
             <i class="fa-solid fa-user input-icon"></i>
-            <input
-              type="text"
-              id="loginUsername"
-              placeholder="Enter your username"
-              autocomplete="username"
-              required
-              autofocus
-            >
+            <input type="text" id="loginUsername" placeholder="Enter your username" autocomplete="username" required
+              autofocus>
           </div>
         </div>
 
@@ -82,14 +81,10 @@
           <label for="loginPassword">Password</label>
           <div class="input-wrapper">
             <i class="fa-solid fa-lock input-icon"></i>
-            <input
-              type="password"
-              id="loginPassword"
-              placeholder="Enter your password"
-              autocomplete="current-password"
-              required
-            >
-            <button type="button" class="toggle-password" onclick="togglePasswordVisibility()" title="Show/Hide Password">
+            <input type="password" id="loginPassword" placeholder="Enter your password" autocomplete="current-password"
+              required>
+            <button type="button" class="toggle-password" onclick="togglePasswordVisibility()"
+              title="Show/Hide Password">
               <i class="fa-solid fa-eye" id="togglePwdIcon"></i>
             </button>
           </div>
@@ -241,4 +236,5 @@
   </script>
 
 </body>
+
 </html>
