@@ -102,20 +102,21 @@ const AttendanceManager = (() => {
   /**
    * Check if a student is already marked present today for the given session
    */
-  function isAlreadyMarked(rollNo, sessionName) {
+  function isAlreadyMarked(rollNo, sessionName, eventId) {
     const today = getTodayDateStr();
     const cleanRoll = rollNo.trim().toUpperCase();
     return logs.some(record => 
       record.rollNo.toUpperCase() === cleanRoll &&
       record.date === today &&
-      (sessionName ? record.session === sessionName : true)
+      (sessionName ? record.session === sessionName : true) &&
+      (eventId ? record.eventId === eventId : true)
     );
   }
 
   /**
    * Record new attendance
    */
-  function recordAttendance(student, sessionName = 'Attendance') {
+  function recordAttendance(student, sessionName = 'Attendance', eventId = null) {
     if (!student || !student.rollNo) {
       return { success: false, reason: 'Invalid student profile' };
     }
@@ -123,8 +124,8 @@ const AttendanceManager = (() => {
     const cleanRoll = student.rollNo.trim().toUpperCase();
     const today = getTodayDateStr();
 
-    if (isAlreadyMarked(cleanRoll, sessionName)) {
-      const existing = logs.find(r => r.rollNo.toUpperCase() === cleanRoll && r.date === today && r.session === sessionName);
+    if (isAlreadyMarked(cleanRoll, sessionName, eventId)) {
+      const existing = logs.find(r => r.rollNo.toUpperCase() === cleanRoll && r.date === today && r.session === sessionName && (eventId ? r.eventId === eventId : true));
       return {
         success: false,
         isDuplicate: true,
@@ -148,8 +149,14 @@ const AttendanceManager = (() => {
       date: today,
       timestamp: now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
       status: 'Present',
-      markedBy: markedBy
+      markedBy: markedBy,
+      walkIn: student.walkIn || false
     };
+
+    // Attach eventId if provided
+    if (eventId) {
+      newRecord.eventId = eventId;
+    }
 
     logs.unshift(newRecord);
     saveLogs(true, newRecord);
@@ -219,13 +226,14 @@ const AttendanceManager = (() => {
   /**
    * Get filtered logs
    */
-  function getFilteredLogs({ date, branch, year, section, session, query } = {}) {
+  function getFilteredLogs({ date, branch, year, section, session, query, eventId } = {}) {
     return logs.filter(r => {
       if (date && r.date !== date) return false;
       if (branch && branch !== 'ALL' && r.branch !== branch && !r.branch.includes(branch) && !branch.includes(r.branch)) return false;
       if (year && year !== 'ALL' && r.year !== year && !r.year.includes(year) && !year.includes(r.year)) return false;
       if (section && section !== 'ALL' && (r.section || '').toUpperCase() !== section.toUpperCase()) return false;
       if (session && session !== 'ALL' && r.session !== session) return false;
+      if (eventId && r.eventId !== eventId) return false;
       if (query) {
         const q = query.toLowerCase().trim();
         const match = r.rollNo.toLowerCase().includes(q) || 
@@ -243,12 +251,27 @@ const AttendanceManager = (() => {
   function getMetrics() {
     const totalRegistered = RosterManager.getAllStudents().length;
     const today = getTodayDateStr();
-    const todayLogs = logs.filter(r => r.date === today);
+
+    // Event-aware filtering
+    const hasEvent = typeof EventManager !== 'undefined' && EventManager.hasActiveEvent();
+    const activeEventId = hasEvent ? EventManager.getActiveEventId() : null;
+
+    let todayLogs = logs.filter(r => r.date === today);
+    if (activeEventId) {
+      todayLogs = todayLogs.filter(r => r.eventId === activeEventId);
+    }
+
+    // If event is active, use event registrations count instead of global roster
+    let registeredCount = totalRegistered;
+    if (hasEvent) {
+      const eventRegs = EventManager.getRegisteredRollNumbers();
+      registeredCount = eventRegs.length || totalRegistered;
+    }
 
     // Unique students present today
     const uniquePresentToday = new Set(todayLogs.map(r => r.rollNo.toUpperCase())).size;
-    const attendanceRate = totalRegistered > 0 
-      ? Math.round((uniquePresentToday / totalRegistered) * 100) 
+    const attendanceRate = registeredCount > 0 
+      ? Math.round((uniquePresentToday / registeredCount) * 100) 
       : 0;
 
     // Branch breakdown
@@ -266,7 +289,7 @@ const AttendanceManager = (() => {
     });
 
     return {
-      totalRegistered,
+      totalRegistered: registeredCount,
       totalPresentToday: uniquePresentToday,
       totalScansToday: todayLogs.length,
       attendanceRate,

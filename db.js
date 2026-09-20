@@ -75,6 +75,8 @@ readJsonFile('roster.json', []);
 readJsonFile('accounts.json', DEFAULT_ACCOUNTS);
 readJsonFile('attendance.json', []);
 readJsonFile('rules.json', {});
+readJsonFile('events.json', []);
+readJsonFile('event_registrations.json', []);
 
 // ----------------------------------------------------------------------------
 // MongoDB Atlas Connection & Initialization
@@ -133,9 +135,16 @@ async function createIndexes() {
     const attendanceCol = db.collection('attendance');
     await attendanceCol.createIndex({ id: 1 }, { unique: true });
     await attendanceCol.createIndex({ rollNo: 1, date: 1, session: 1 });
+    await attendanceCol.createIndex({ eventId: 1 });
 
     const accountsCol = db.collection('accounts');
     await accountsCol.createIndex({ username: 1 }, { unique: true });
+
+    const eventsCol = db.collection('events');
+    await eventsCol.createIndex({ id: 1 }, { unique: true });
+
+    const eventRegsCol = db.collection('event_registrations');
+    await eventRegsCol.createIndex({ eventId: 1, rollNo: 1 }, { unique: true });
   } catch (err) {
     console.warn('[MongoDB Atlas] Index creation note:', err.message);
   }
@@ -478,6 +487,168 @@ async function saveRules(rulesObj) {
   return true;
 }
 
+// --- EVENTS ---
+async function getEvents() {
+  if (isConnected && db) {
+    try {
+      const docs = await db.collection('events').find({}, { projection: { _id: 0 } }).sort({ createdAt: -1 }).toArray();
+      writeJsonFile('events.json', docs);
+      return docs;
+    } catch (err) {
+      console.warn('[MongoDB Atlas] Read events error, fallback:', err.message);
+    }
+  }
+  return readJsonFile('events.json', []);
+}
+
+async function createEvent(eventData) {
+  const event = {
+    id: 'evt-' + Date.now() + '-' + Math.random().toString(36).substr(2, 5),
+    name: eventData.name || 'Untitled Event',
+    date: eventData.date || new Date().toISOString().split('T')[0],
+    description: eventData.description || '',
+    status: 'active',
+    createdBy: eventData.createdBy || 'admin',
+    createdAt: new Date().toISOString()
+  };
+
+  const events = readJsonFile('events.json', []);
+  events.unshift(event);
+  writeJsonFile('events.json', events);
+
+  if (isConnected && db) {
+    try {
+      await db.collection('events').insertOne({ ...event });
+    } catch (err) {
+      console.warn('[MongoDB Atlas] Create event error:', err.message);
+    }
+  }
+  return event;
+}
+
+async function updateEvent(eventId, updates) {
+  const events = readJsonFile('events.json', []);
+  const idx = events.findIndex(e => e.id === eventId);
+  if (idx === -1) return null;
+
+  events[idx] = { ...events[idx], ...updates, updatedAt: new Date().toISOString() };
+  writeJsonFile('events.json', events);
+
+  if (isConnected && db) {
+    try {
+      const updateDoc = { ...updates, updatedAt: new Date().toISOString() };
+      delete updateDoc.id;
+      delete updateDoc._id;
+      await db.collection('events').updateOne({ id: eventId }, { $set: updateDoc });
+    } catch (err) {
+      console.warn('[MongoDB Atlas] Update event error:', err.message);
+    }
+  }
+  return events[idx];
+}
+
+async function deleteEvent(eventId) {
+  let events = readJsonFile('events.json', []);
+  events = events.filter(e => e.id !== eventId);
+  writeJsonFile('events.json', events);
+
+  // Also remove all registrations and attendance for this event
+  let regs = readJsonFile('event_registrations.json', []);
+  regs = regs.filter(r => r.eventId !== eventId);
+  writeJsonFile('event_registrations.json', regs);
+
+  let attendance = readJsonFile('attendance.json', []);
+  const eventAttendance = attendance.filter(a => a.eventId === eventId);
+  attendance = attendance.filter(a => a.eventId !== eventId);
+  writeJsonFile('attendance.json', attendance);
+
+  if (isConnected && db) {
+    try {
+      await db.collection('events').deleteOne({ id: eventId });
+      await db.collection('event_registrations').deleteMany({ eventId });
+      await db.collection('attendance').deleteMany({ eventId });
+    } catch (err) {
+      console.warn('[MongoDB Atlas] Delete event error:', err.message);
+    }
+  }
+  return { deletedAttendance: eventAttendance.length };
+}
+
+// --- EVENT REGISTRATIONS ---
+async function getEventRegistrations(eventId) {
+  if (isConnected && db) {
+    try {
+      const docs = await db.collection('event_registrations').find({ eventId }, { projection: { _id: 0 } }).toArray();
+      // Merge to local
+      const allRegs = readJsonFile('event_registrations.json', []);
+      const otherRegs = allRegs.filter(r => r.eventId !== eventId);
+      writeJsonFile('event_registrations.json', [...otherRegs, ...docs]);
+      return docs.map(d => d.rollNo);
+    } catch (err) {
+      console.warn('[MongoDB Atlas] Read event registrations error:', err.message);
+    }
+  }
+  const regs = readJsonFile('event_registrations.json', []);
+  return regs.filter(r => r.eventId === eventId).map(r => r.rollNo);
+}
+
+async function registerStudentsToEvent(eventId, rollNumbers) {
+  if (!Array.isArray(rollNumbers) || rollNumbers.length === 0) return { added: 0 };
+
+  const regs = readJsonFile('event_registrations.json', []);
+  let added = 0;
+
+  rollNumbers.forEach(rollNo => {
+    const clean = rollNo.trim().toUpperCase();
+    const exists = regs.some(r => r.eventId === eventId && r.rollNo === clean);
+    if (!exists) {
+      regs.push({ eventId, rollNo: clean, registeredAt: new Date().toISOString() });
+      added++;
+    }
+  });
+
+  writeJsonFile('event_registrations.json', regs);
+
+  if (isConnected && db) {
+    try {
+      const docs = rollNumbers.map(rollNo => ({
+        eventId,
+        rollNo: rollNo.trim().toUpperCase(),
+        registeredAt: new Date().toISOString()
+      }));
+      await db.collection('event_registrations').bulkWrite(
+        docs.map(d => ({
+          updateOne: {
+            filter: { eventId: d.eventId, rollNo: d.rollNo },
+            update: { $set: d },
+            upsert: true
+          }
+        })),
+        { ordered: false }
+      );
+    } catch (err) {
+      console.warn('[MongoDB Atlas] Register students to event error:', err.message);
+    }
+  }
+  return { added, total: regs.filter(r => r.eventId === eventId).length };
+}
+
+async function unregisterStudentFromEvent(eventId, rollNo) {
+  const clean = rollNo.trim().toUpperCase();
+  let regs = readJsonFile('event_registrations.json', []);
+  regs = regs.filter(r => !(r.eventId === eventId && r.rollNo === clean));
+  writeJsonFile('event_registrations.json', regs);
+
+  if (isConnected && db) {
+    try {
+      await db.collection('event_registrations').deleteOne({ eventId, rollNo: clean });
+    } catch (err) {
+      console.warn('[MongoDB Atlas] Unregister student error:', err.message);
+    }
+  }
+  return { remaining: regs.filter(r => r.eventId === eventId).length };
+}
+
 // ----------------------------------------------------------------------------
 // Health, Status & Configuration
 // ----------------------------------------------------------------------------
@@ -579,5 +750,12 @@ module.exports = {
   getAccounts,
   saveAccounts,
   getRules,
-  saveRules
+  saveRules,
+  getEvents,
+  createEvent,
+  updateEvent,
+  deleteEvent,
+  getEventRegistrations,
+  registerStudentsToEvent,
+  unregisterStudentFromEvent
 };

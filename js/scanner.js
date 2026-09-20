@@ -265,7 +265,7 @@ const ScannerEngine = (() => {
   /**
    * Main roll number validation and attendance registration pipeline
    */
-  function processRollNumber(inputRollNumber) {
+  function processRollNumber(inputRollNumber, forceWalkin = false) {
     const activeSession = 'Attendance';
     
     // Parse QR payload with maximum format flexibility
@@ -280,15 +280,38 @@ const ScannerEngine = (() => {
 
     // 1. Check if the Roll Number is in the Roster / Whitelist
     let student = RosterManager.findStudent(rollNo);
+    const isNewStudent = !student;
 
-    // If student is NOT pre-registered in roster, AUTO-REGISTER so attendance is never rejected or lost!
+    // Auto-classify for display
+    const classification = RosterManager.autoClassifyRollNumber(rollNo);
+    const studentName = parsed.name || (student ? student.name : `Student ${rollNo}`);
+    const studentBranch = parsed.branch || (student ? student.branch : classification.branch);
+    const studentYear = parsed.year || (student ? student.year : classification.year);
+    const studentSection = parsed.section || (student ? student.section : '');
+
+    // 2. Event-aware registration check
+    const hasEvent = typeof EventManager !== 'undefined' && EventManager.hasActiveEvent();
+    const isRegisteredForEvent = hasEvent ? EventManager.isStudentRegistered(rollNo) : true;
+
+    // If student is NOT registered for the active event (or not in roster at all), trigger walk-in flow
+    if (hasEvent && (!isRegisteredForEvent || isNewStudent) && !forceWalkin) {
+      playSound('warning');
+
+      // Show walk-in registration modal
+      App.openWalkinModal({
+        rollNo: rollNo,
+        name: studentName === `Student ${rollNo}` ? '' : studentName,
+        branch: studentBranch,
+        year: studentYear,
+        section: studentSection,
+        isNewStudent: isNewStudent,
+        isRegisteredForEvent: isRegisteredForEvent
+      });
+      return;
+    }
+
+    // If student is NOT in roster, auto-register to global roster
     if (!student) {
-      const classification = RosterManager.autoClassifyRollNumber(rollNo);
-      const studentName = parsed.name || `Student ${rollNo}`;
-      const studentBranch = parsed.branch || classification.branch;
-      const studentYear = parsed.year || classification.year;
-      const studentSection = parsed.section || '';
-
       try {
         student = RosterManager.addStudent({
           rollNo: rollNo,
@@ -331,15 +354,16 @@ const ScannerEngine = (() => {
       }
     }
 
-    // 2. Check if already marked present today for this session
-    if (AttendanceManager.isAlreadyMarked(rollNo, activeSession)) {
+    // 3. Check if already marked present today for this session (event-aware)
+    const eventId = hasEvent ? EventManager.getActiveEventId() : null;
+    if (AttendanceManager.isAlreadyMarked(rollNo, activeSession, eventId)) {
       playSound('warning');
       const allLogs = AttendanceManager.getAllLogs();
-      const existing = allLogs.find(r => r.rollNo.toUpperCase() === rollNo.toUpperCase() && r.session === activeSession);
+      const existing = allLogs.find(r => r.rollNo.toUpperCase() === rollNo.toUpperCase() && r.session === activeSession && (!eventId || r.eventId === eventId));
       showResultBanner({
         type: 'warning',
         title: 'ALREADY MARKED PRESENT',
-        message: `${student.name} (${student.rollNo}) is already checked in today at ${existing?.timestamp || 'earlier'}.`,
+        message: `${student.name} (${student.rollNo}) is already checked in${eventId ? ' for this event' : ' today'} at ${existing?.timestamp || 'earlier'}.`,
         rollNo: rollNo,
         student: student,
         record: existing
@@ -348,15 +372,16 @@ const ScannerEngine = (() => {
       return;
     }
 
-    // 3. Mark Attendance Successfully & Persist Immediately!
-    const recordResult = AttendanceManager.recordAttendance(student, activeSession);
+    // 4. Mark Attendance Successfully & Persist Immediately!
+    const recordResult = AttendanceManager.recordAttendance(student, activeSession, eventId);
 
     if (recordResult.success) {
       playSound('success');
+      const eventLabel = hasEvent ? ` for "${EventManager.getActiveEvent().name}"` : '';
       showResultBanner({
         type: 'success',
         title: 'ATTENDANCE CONFIRMED & STORED',
-        message: `Attendance saved to Database & Local Storage!`,
+        message: `Attendance saved${eventLabel}!`,
         rollNo: rollNo,
         student: student,
         record: recordResult.record

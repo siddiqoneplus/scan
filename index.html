@@ -100,13 +100,42 @@
   <!-- Main Container -->
   <main class="main-content">
 
+    <!-- Event Selector Bar -->
+    <section class="event-selector-bar" id="eventSelectorBar">
+      <div class="event-selector-left">
+        <div class="event-selector-icon">
+          <i class="fa-solid fa-calendar-days"></i>
+        </div>
+        <div class="event-selector-info">
+          <span class="event-selector-label">Active Event:</span>
+          <span id="activeEventLabel" class="event-active-name">
+            <i class="fa-solid fa-globe"></i> <span class="text-subtle">General Mode (No Event Selected)</span>
+          </span>
+        </div>
+      </div>
+      <div class="event-selector-right">
+        <select id="eventSelectDropdown" class="select-styled event-select" onchange="App.handleEventSwitch()" title="Select Active Event">
+          <option value="none">— No Event (General Mode) —</option>
+        </select>
+        <button id="btnRegisterToEvent" class="btn btn-emerald btn-sm hidden" onclick="App.registerAllStudentsToEvent()" title="Register all roster students to active event">
+          <i class="fa-solid fa-user-plus"></i> Register Roster
+        </button>
+        <button id="btnCreateEvent" class="btn btn-primary btn-sm admin-only-el" onclick="App.openModal('modalCreateEvent')" title="Create New Event">
+          <i class="fa-solid fa-plus"></i> New Event
+        </button>
+        <button id="btnManageEvents" class="btn btn-secondary btn-sm admin-only-el" onclick="App.openManageEventsModal()" title="Manage All Events">
+          <i class="fa-solid fa-list-check"></i> Manage
+        </button>
+      </div>
+    </section>
+
     <!-- KPI Summary Cards (Global Top Bar) -->
     <section class="kpi-grid" aria-label="Key Performance Indicators">
       <div class="kpi-card">
         <div class="kpi-info">
           <h3>Registered Students</h3>
           <div class="kpi-number" id="kpiTotalRegistered">0</div>
-          <div class="kpi-sub">Admin Whitelisted</div>
+          <div class="kpi-sub" id="kpiRegSub">Admin Whitelisted</div>
         </div>
         <div class="kpi-icon cyan">
           <i class="fa-solid fa-user-graduate"></i>
@@ -122,7 +151,7 @@
             </button>
           </div>
           <div class="kpi-number" id="kpiTotalPresent">0</div>
-          <div class="kpi-sub">Unique check-ins</div>
+          <div class="kpi-sub" id="kpiPresSub">Unique check-ins</div>
         </div>
         <div class="kpi-icon emerald">
           <i class="fa-solid fa-clipboard-check"></i>
@@ -1015,11 +1044,131 @@
     </div>
   </div>
 
+  <!-- MODAL: WALK-IN REGISTRATION -->
+  <div class="modal-backdrop" id="modalWalkinRegister">
+    <div class="modal-box modal-walkin">
+      <div class="modal-header">
+        <h3><i class="fa-solid fa-person-walking-arrow-right modal-icon-amber"></i> Unregistered Student Detected</h3>
+        <button class="btn btn-secondary btn-icon" onclick="App.submitWalkinReject()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="walkin-alert">
+          <i class="fa-solid fa-triangle-exclamation"></i>
+          <span id="walkinStatusMsg">This student is not registered for the active event.</span>
+        </div>
+
+        <div class="walkin-event-label">
+          <i class="fa-solid fa-calendar-check"></i> Event: <strong id="walkinEventName">—</strong>
+        </div>
+
+        <div class="walkin-student-preview">
+          <div class="walkin-detail-row">
+            <span class="walkin-label">Roll Number:</span>
+            <span class="walkin-value font-mono" id="walkinRollNo">—</span>
+          </div>
+          <div class="walkin-detail-row">
+            <span class="walkin-label">Auto-detected Branch:</span>
+            <span class="walkin-value" id="walkinBranch">—</span>
+          </div>
+          <div class="walkin-detail-row">
+            <span class="walkin-label">Auto-detected Year:</span>
+            <span class="walkin-value" id="walkinYear">—</span>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="walkinNameInput"><i class="fa-solid fa-user text-cyan"></i> Student Name</label>
+          <input type="text" id="walkinNameInput" class="input-styled" placeholder="Enter student name (or leave blank)">
+        </div>
+
+        <input type="hidden" id="walkinHiddenRollNo">
+        <input type="hidden" id="walkinHiddenBranch">
+        <input type="hidden" id="walkinHiddenYear">
+        <input type="hidden" id="walkinHiddenSection">
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="App.submitWalkinReject()">
+          <i class="fa-solid fa-ban"></i> Reject
+        </button>
+        <button type="button" class="btn btn-emerald" onclick="App.submitWalkinApprove()">
+          <i class="fa-solid fa-user-check"></i> Register & Mark Present
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: CREATE NEW EVENT -->
+  <div class="modal-backdrop" id="modalCreateEvent">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3><i class="fa-solid fa-calendar-plus modal-icon-emerald"></i> Create New Event</h3>
+        <button class="btn btn-secondary btn-icon" onclick="App.closeModal('modalCreateEvent')">&times;</button>
+      </div>
+      <form id="formCreateEvent" onsubmit="App.submitCreateEvent(event)">
+        <div class="modal-body">
+          <div class="form-group">
+            <label for="newEventName"><i class="fa-solid fa-tag text-cyan"></i> Event Name *</label>
+            <input type="text" id="newEventName" class="input-styled" placeholder="e.g. Tech Fest 2026, Hackathon Day, Freshers Welcome" required>
+          </div>
+          <div class="form-group">
+            <label for="newEventDate"><i class="fa-solid fa-calendar text-cyan"></i> Event Date *</label>
+            <input type="date" id="newEventDate" class="input-styled" required>
+          </div>
+          <div class="form-group">
+            <label for="newEventDesc"><i class="fa-solid fa-align-left text-cyan"></i> Description (optional)</label>
+            <input type="text" id="newEventDesc" class="input-styled" placeholder="Short event description">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" onclick="App.closeModal('modalCreateEvent')">Cancel</button>
+          <button type="submit" class="btn btn-primary"><i class="fa-solid fa-plus"></i> Create Event</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: MANAGE EVENTS -->
+  <div class="modal-backdrop" id="modalManageEvents">
+    <div class="modal-box modal-lg">
+      <div class="modal-header">
+        <h3><i class="fa-solid fa-list-check modal-icon-cyan"></i> Manage Events</h3>
+        <button class="btn btn-secondary btn-icon" onclick="App.closeModal('modalManageEvents')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p class="text-muted modal-desc">Create, activate, and delete events. Each event has its own registration list and attendance records.</p>
+
+        <div class="table-container">
+          <table class="custom-table" id="eventsTable">
+            <thead>
+              <tr>
+                <th class="col-w-50">#</th>
+                <th>Event Name</th>
+                <th>Date</th>
+                <th>Description</th>
+                <th class="text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="eventsTableBody">
+              <!-- Rendered by JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-primary" onclick="App.closeModal('modalManageEvents'); App.openModal('modalCreateEvent');">
+          <i class="fa-solid fa-plus"></i> Create New Event
+        </button>
+        <button type="button" class="btn btn-secondary" onclick="App.closeModal('modalManageEvents')">Close</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Toast Notification Container -->
   <div id="toastContainer" class="toast-container" aria-live="polite"></div>
 
   <!-- Application Scripts -->
   <script src="js/auth.js"></script>
+  <script src="js/events.js"></script>
   <script src="js/roster.js"></script>
   <script src="js/analytics.js"></script>
   <script src="js/qr-generator.js"></script>

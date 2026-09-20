@@ -18,6 +18,7 @@ const App = (() => {
     }
 
     // Initialize components
+    EventManager.init();
     RosterManager.init();
     AttendanceManager.init();
 
@@ -34,6 +35,9 @@ const App = (() => {
     // Apply role-based permissions
     applyRolePermissions();
     renderHeaderUserInfo();
+
+    // Render event selector
+    renderEventSelector();
 
     // Initial render
     refreshAllViews();
@@ -63,6 +67,16 @@ const App = (() => {
       AttendanceManager.renderCharts();
     });
 
+    // Listen for event changes
+    window.addEventListener('events:updated', () => {
+      renderEventSelector();
+    });
+
+    window.addEventListener('events:switched', () => {
+      renderEventSelector();
+      refreshAllViews();
+    });
+
     // Cross-tab real-time storage event synchronization
     window.addEventListener('storage', (e) => {
       try {
@@ -82,6 +96,7 @@ const App = (() => {
     setInterval(() => {
       RosterManager.syncFromServer();
       AttendanceManager.syncFromServer();
+      EventManager.syncFromServer();
       checkDatabaseStatus();
     }, 5000);
 
@@ -252,6 +267,13 @@ const App = (() => {
     if (elPres) elPres.textContent = metrics.totalPresentToday;
     if (elRate) elRate.textContent = `${metrics.attendanceRate}%`;
     if (elScans) elScans.textContent = metrics.totalScansToday;
+
+    // Update KPI subtitles with event context
+    const activeEvent = EventManager.getActiveEvent();
+    const kpiRegSub = document.getElementById('kpiRegSub');
+    const kpiPresSub = document.getElementById('kpiPresSub');
+    if (kpiRegSub) kpiRegSub.textContent = activeEvent ? `For: ${activeEvent.name}` : 'Admin Whitelisted';
+    if (kpiPresSub) kpiPresSub.textContent = activeEvent ? `Event check-ins` : 'Unique check-ins';
   }
 
   function renderLiveTicker() {
@@ -1341,6 +1363,240 @@ const App = (() => {
     }
   }
 
+  // =====================================================
+  // EVENT MANAGEMENT
+  // =====================================================
+
+  function renderEventSelector() {
+    const container = document.getElementById('eventSelectorBar');
+    if (!container) return;
+
+    const events = EventManager.getEvents();
+    const activeEvent = EventManager.getActiveEvent();
+    const isAdmin = AuthManager.isAdmin();
+
+    const select = document.getElementById('eventSelectDropdown');
+    if (select) {
+      select.innerHTML = `<option value="none">— No Event (General Mode) —</option>`
+        + events.map(e => `<option value="${escapeHtml(e.id)}" ${activeEvent && activeEvent.id === e.id ? 'selected' : ''}>${escapeHtml(e.name)} (${escapeHtml(e.date)})</option>`).join('');
+    }
+
+    const activeLabel = document.getElementById('activeEventLabel');
+    if (activeLabel) {
+      if (activeEvent) {
+        activeLabel.innerHTML = `<i class="fa-solid fa-calendar-check"></i> <strong>${escapeHtml(activeEvent.name)}</strong> <span class="text-subtle">• ${escapeHtml(activeEvent.date)}</span>`;
+        activeLabel.style.display = '';
+      } else {
+        activeLabel.innerHTML = `<i class="fa-solid fa-globe"></i> <span class="text-subtle">General Mode (No Event Selected)</span>`;
+        activeLabel.style.display = '';
+      }
+    }
+
+    // Show/hide event management buttons for admin
+    const manageBtn = document.getElementById('btnManageEvents');
+    if (manageBtn) manageBtn.style.display = isAdmin ? '' : 'none';
+    const createBtn = document.getElementById('btnCreateEvent');
+    if (createBtn) createBtn.style.display = isAdmin ? '' : 'none';
+
+    // Show/hide register-to-event button
+    const regBtn = document.getElementById('btnRegisterToEvent');
+    if (regBtn) regBtn.classList.toggle('hidden', !(isAdmin && activeEvent));
+  }
+
+  function handleEventSwitch() {
+    const select = document.getElementById('eventSelectDropdown');
+    if (!select) return;
+    const eventId = select.value;
+    EventManager.setActiveEvent(eventId === 'none' ? null : eventId);
+    showToast(eventId === 'none' ? 'Switched to General Mode' : `Switched to event: ${EventManager.getActiveEvent()?.name}`, 'info');
+  }
+
+  async function submitCreateEvent(e) {
+    if (e) e.preventDefault();
+    const name = document.getElementById('newEventName')?.value;
+    const date = document.getElementById('newEventDate')?.value;
+    const description = document.getElementById('newEventDesc')?.value || '';
+
+    if (!name || !date) {
+      showToast('Event name and date are required.', 'warning');
+      return;
+    }
+
+    const event = await EventManager.createEvent({ name, date, description });
+    if (event) {
+      closeModal('modalCreateEvent');
+      document.getElementById('formCreateEvent')?.reset();
+      EventManager.setActiveEvent(event.id);
+      showToast(`Event "${event.name}" created and set as active!`, 'success');
+      renderEventSelector();
+      renderEventsTable();
+    } else {
+      showToast('Failed to create event.', 'error');
+    }
+  }
+
+  function renderEventsTable() {
+    const tbody = document.getElementById('eventsTableBody');
+    if (!tbody) return;
+
+    const events = EventManager.getEvents();
+    const activeEventId = EventManager.getActiveEventId();
+
+    if (events.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="5" class="empty-placeholder" style="padding:2rem;text-align:center;"><i class="fa-solid fa-calendar-xmark" style="font-size:1.5rem;opacity:0.4;display:block;margin-bottom:0.5rem;"></i>No events created yet.</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = events.map((evt, idx) => {
+      const isActive = activeEventId === evt.id;
+      return `
+        <tr class="${isActive ? 'event-row-active' : ''}">
+          <td class="text-subtle col-w-50">${idx + 1}</td>
+          <td><strong>${escapeHtml(evt.name)}</strong>${isActive ? ' <span class="tag tag-present"><i class="fa-solid fa-star"></i> Active</span>' : ''}</td>
+          <td class="font-mono text-cyan">${escapeHtml(evt.date)}</td>
+          <td>${escapeHtml(evt.description || '—')}</td>
+          <td class="text-right">
+            <div class="row-action-btns">
+              ${!isActive ? `<button class="btn btn-primary btn-sm" onclick="App.activateEvent('${evt.id}')" title="Set as Active Event"><i class="fa-solid fa-play"></i></button>` : `<button class="btn btn-secondary btn-sm" onclick="App.activateEvent('none')" title="Deactivate Event"><i class="fa-solid fa-stop"></i></button>`}
+              <button class="btn btn-danger btn-sm" onclick="App.confirmDeleteEvent('${evt.id}', '${escapeHtml(evt.name).replace(/'/g, '\\&#039;')}')" title="Delete Event"><i class="fa-solid fa-trash"></i></button>
+            </div>
+          </td>
+        </tr>
+      `;
+    }).join('');
+  }
+
+  function activateEvent(eventId) {
+    EventManager.setActiveEvent(eventId === 'none' ? null : eventId);
+    const evt = EventManager.getActiveEvent();
+    showToast(evt ? `Activated: ${evt.name}` : 'Deactivated event (General Mode)', 'info');
+    renderEventsTable();
+  }
+
+  async function confirmDeleteEvent(eventId, eventName) {
+    if (confirm(`Delete event "${eventName}"? This will permanently erase all its attendance data.`)) {
+      const success = await EventManager.deleteEvent(eventId);
+      if (success) {
+        showToast(`Event "${eventName}" deleted.`, 'info');
+        renderEventsTable();
+        refreshAllViews();
+      } else {
+        showToast('Failed to delete event.', 'error');
+      }
+    }
+  }
+
+  function openManageEventsModal() {
+    renderEventsTable();
+    openModal('modalManageEvents');
+  }
+
+  // Register all roster students to active event
+  async function registerAllStudentsToEvent() {
+    const activeEvent = EventManager.getActiveEvent();
+    if (!activeEvent) {
+      showToast('No active event selected.', 'warning');
+      return;
+    }
+    const students = RosterManager.getAllStudents();
+    if (students.length === 0) {
+      showToast('No students in roster to register.', 'warning');
+      return;
+    }
+    const rollNumbers = students.map(s => s.rollNo);
+    const result = await EventManager.registerStudents(activeEvent.id, rollNumbers);
+    showToast(`Registered ${result.added || rollNumbers.length} students to "${activeEvent.name}"!`, 'success');
+    refreshAllViews();
+  }
+
+  // =====================================================
+  // WALK-IN REGISTRATION
+  // =====================================================
+
+  function openWalkinModal(data) {
+    const modal = document.getElementById('modalWalkinRegister');
+    if (!modal) return;
+
+    document.getElementById('walkinRollNo').textContent = data.rollNo || '';
+    document.getElementById('walkinBranch').textContent = data.branch || 'Unknown';
+    document.getElementById('walkinYear').textContent = data.year || 'Unknown';
+    document.getElementById('walkinNameInput').value = data.name || '';
+    document.getElementById('walkinHiddenRollNo').value = data.rollNo || '';
+    document.getElementById('walkinHiddenBranch').value = data.branch || '';
+    document.getElementById('walkinHiddenYear').value = data.year || '';
+    document.getElementById('walkinHiddenSection').value = data.section || '';
+
+    const statusMsg = document.getElementById('walkinStatusMsg');
+    if (statusMsg) {
+      if (data.isNewStudent) {
+        statusMsg.innerHTML = '<i class="fa-solid fa-user-slash"></i> Student is <strong>NOT in the roster</strong> and not registered for this event.';
+      } else {
+        statusMsg.innerHTML = '<i class="fa-solid fa-calendar-xmark"></i> Student exists in roster but is <strong>NOT registered for this event</strong>.';
+      }
+    }
+
+    const activeEvent = EventManager.getActiveEvent();
+    const eventLabel = document.getElementById('walkinEventName');
+    if (eventLabel && activeEvent) {
+      eventLabel.textContent = activeEvent.name;
+    }
+
+    openModal('modalWalkinRegister');
+  }
+
+  async function submitWalkinApprove(e) {
+    if (e) e.preventDefault();
+
+    const rollNo = document.getElementById('walkinHiddenRollNo')?.value;
+    const name = document.getElementById('walkinNameInput')?.value || `Student ${rollNo}`;
+    const branch = document.getElementById('walkinHiddenBranch')?.value;
+    const year = document.getElementById('walkinHiddenYear')?.value;
+    const section = document.getElementById('walkinHiddenSection')?.value;
+
+    if (!rollNo) {
+      showToast('Invalid roll number.', 'error');
+      return;
+    }
+
+    // 1. Add to global roster if not already there
+    let student = RosterManager.findStudent(rollNo);
+    if (!student) {
+      try {
+        student = RosterManager.addStudent({
+          rollNo, name, branch, year, section,
+          assignedTo: 'all'
+        });
+      } catch (err) {
+        student = RosterManager.findStudent(rollNo);
+      }
+    } else if (name && name !== `Student ${rollNo}`) {
+      // Update name if provided
+      try { RosterManager.updateStudent(rollNo, { name }); student.name = name; } catch (e) {}
+    }
+
+    // 2. Register to active event
+    const activeEvent = EventManager.getActiveEvent();
+    if (activeEvent) {
+      await EventManager.registerStudents(activeEvent.id, [rollNo]);
+    }
+
+    // 3. Mark attendance with walkIn flag
+    if (student) {
+      student.walkIn = true;
+    }
+
+    closeModal('modalWalkinRegister');
+
+    // 4. Re-process the scan with forceWalkin=true to mark attendance
+    ScannerEngine.processRollNumber(rollNo, true);
+    showToast(`Walk-in registered: ${name} (${rollNo})`, 'success');
+  }
+
+  function submitWalkinReject() {
+    closeModal('modalWalkinRegister');
+    showToast('Walk-in rejected. Student was not registered.', 'info');
+  }
+
   return {
     init,
     switchTab,
@@ -1383,7 +1639,20 @@ const App = (() => {
     submitAddAccount,
     deleteAccountEntry,
     renderAccountsTable,
-    filterRoster: () => renderRosterTable()
+    filterRoster: () => renderRosterTable(),
+    // Event Management
+    renderEventSelector,
+    handleEventSwitch,
+    submitCreateEvent,
+    renderEventsTable,
+    activateEvent,
+    confirmDeleteEvent,
+    openManageEventsModal,
+    registerAllStudentsToEvent,
+    // Walk-in Registration
+    openWalkinModal,
+    submitWalkinApprove,
+    submitWalkinReject
   };
 })();
 

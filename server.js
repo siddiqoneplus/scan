@@ -223,6 +223,64 @@ const server = http.createServer(async (req, res) => {
       }
     }
 
+    // 6. EVENTS API
+    if (reqPath === '/api/events') {
+      if (req.method === 'GET') {
+        const events = await db.getEvents();
+        return sendJson(res, 200, { success: true, events });
+      }
+
+      if (req.method === 'POST') {
+        const body = await parseBody(req);
+        if (body.action === 'update' && body.eventId) {
+          const updated = await db.updateEvent(body.eventId, body.updates || {});
+          return sendJson(res, 200, { success: !!updated, event: updated });
+        }
+        const event = await db.createEvent(body);
+        return sendJson(res, 201, { success: true, event });
+      }
+
+      if (req.method === 'DELETE') {
+        const body = await parseBody(req);
+        const eventId = body.eventId || params.get('eventId');
+        if (!eventId) {
+          return sendJson(res, 400, { success: false, error: 'eventId is required' });
+        }
+        const result = await db.deleteEvent(eventId);
+        return sendJson(res, 200, { success: true, message: 'Event deleted', ...result });
+      }
+    }
+
+    // 7. EVENT REGISTRATIONS API
+    if (reqPath === '/api/events/registrations') {
+      if (req.method === 'GET') {
+        const eventId = params.get('eventId');
+        if (!eventId) {
+          return sendJson(res, 400, { success: false, error: 'eventId query param is required' });
+        }
+        const rollNumbers = await db.getEventRegistrations(eventId);
+        return sendJson(res, 200, { success: true, eventId, rollNumbers, count: rollNumbers.length });
+      }
+
+      if (req.method === 'POST') {
+        const body = await parseBody(req);
+        if (!body.eventId || !body.rollNumbers) {
+          return sendJson(res, 400, { success: false, error: 'eventId and rollNumbers[] are required' });
+        }
+        const result = await db.registerStudentsToEvent(body.eventId, body.rollNumbers);
+        return sendJson(res, 200, { success: true, ...result });
+      }
+
+      if (req.method === 'DELETE') {
+        const body = await parseBody(req);
+        if (!body.eventId || !body.rollNo) {
+          return sendJson(res, 400, { success: false, error: 'eventId and rollNo are required' });
+        }
+        const result = await db.unregisterStudentFromEvent(body.eventId, body.rollNo);
+        return sendJson(res, 200, { success: true, ...result });
+      }
+    }
+
     return sendJson(res, 404, { success: false, error: 'API endpoint not found' });
   }
 
