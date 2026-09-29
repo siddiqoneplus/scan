@@ -237,7 +237,7 @@ const server = http.createServer(async (req, res) => {
             
             logAudit(user, 'attendance modified', recordId, { oldStatus: auditEntry.oldStatus, newStatus: auditEntry.newStatus }); return sendJson(res, 200, { success: true, record: updatedRecord });
          } catch (e) {
-            return sendJson(res, 500, { success: false, error: e.message });
+            return handleApiError(res, e);
          }
       }
 
@@ -278,7 +278,7 @@ const server = http.createServer(async (req, res) => {
            const rule = await db.saveClassificationRule(body);
            return sendJson(res, 200, { success: true, rule });
         } catch (e) {
-           return sendJson(res, 400, { success: false, error: e.message });
+           return handleApiError(res, e);
         }
       }
       if (req.method === 'DELETE') {
@@ -313,7 +313,7 @@ const server = http.createServer(async (req, res) => {
             students: result.students
           });
         } catch (e) {
-          return sendJson(res, 500, { success: false, error: e.message });
+          return handleApiError(res, e);
         }
       }
     }
@@ -422,7 +422,7 @@ const server = http.createServer(async (req, res) => {
           
           return sendJson(res, 200, { success: true, data: paginated, pagination: { total, page, limit, totalPages } });
         } catch(e) {
-          return sendJson(res, 500, { success: false, error: e.message });
+          return handleApiError(res, e);
         }
       }
     }
@@ -477,7 +477,7 @@ const server = http.createServer(async (req, res) => {
           });
           
         } catch (err) {
-          return sendJson(res, 500, { success: false, error: err.message });
+          return handleApiError(res, err);
         }
       }
     }
@@ -572,7 +572,7 @@ const server = http.createServer(async (req, res) => {
              }
            });
         } catch (err) {
-           return sendJson(res, 500, { success: false, error: err.message });
+           return handleApiError(res, err);
         }
       }
     }
@@ -673,7 +673,7 @@ const server = http.createServer(async (req, res) => {
               if (e.message === 'DUPLICATE_ATTENDANCE') {
                 return sendJson(res, 400, { success: false, reason: 'duplicate scan', error: 'Attendance already marked.' });
               }
-              return sendJson(res, 400, { success: false, error: e.message });
+              return handleApiError(res, e);
            }
         } 
         else if (body.logs && Array.isArray(body.logs)) {
@@ -689,7 +689,7 @@ const server = http.createServer(async (req, res) => {
               }
                return sendJson(res, 200, { success: true, message: 'Batch attendance processed' });
            } catch (e) {
-              return sendJson(res, 400, { success: false, error: e.message });
+              return handleApiError(res, e);
            }
         } else if (body.rollNo && body.session) {
            try {
@@ -702,7 +702,7 @@ const server = http.createServer(async (req, res) => {
               if (e.message === 'DUPLICATE_ATTENDANCE') {
                 return sendJson(res, 400, { success: false, reason: 'duplicate scan', error: 'Attendance already marked.' });
               }
-              return sendJson(res, 400, { success: false, error: e.message });
+              return handleApiError(res, e);
            }
         } else {
            return sendJson(res, 400, { success: false, error: 'Invalid payload format' });
@@ -827,7 +827,7 @@ const server = http.createServer(async (req, res) => {
         if (e.message === 'DUPLICATE_ATTENDANCE') {
           return sendJson(res, 200, { success: false, reason: 'duplicate scan', error: 'Attendance already marked.', student });
         }
-        return sendJson(res, 500, { success: false, error: e.message });
+        return handleApiError(res, e);
       }
     }
 
