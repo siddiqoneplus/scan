@@ -383,13 +383,7 @@ const App = (() => {
     input.addEventListener('input', () => {
       const val = input.value.trim();
       if (val.length >= 4) {
-        const classified = RosterManager.autoClassifyRollNumber(val);
-        branchInput.value = classified.branch;
-        yearInput.value = classified.year;
-        if (hint) {
-          hint.innerHTML = `<i class="fa-solid fa-wand-magic-sparkles"></i> Auto-detected: <strong>${classified.branch}</strong> • <strong>${classified.year}</strong>`;
-          hint.style.display = 'block';
-        }
+        if (hint) hint.style.display = 'none';
       } else {
         if (hint) hint.style.display = 'none';
       }
@@ -1656,6 +1650,9 @@ const App = (() => {
     clearAllStudents,
     handleGoogleFormFileUpload,
     openBranchRulesModal,
+    submitClassificationRule,
+    editClassificationRule,
+    deleteClassificationRule,
     submitAddBranchRule,
     deleteBranchRuleEntry,
     clearAnalyticsDateFilter,

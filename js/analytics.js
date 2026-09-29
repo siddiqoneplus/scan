@@ -26,11 +26,7 @@ const AttendanceManager = (() => {
         let updated = false;
         logs.forEach(r => {
           if (r.rollNo && typeof RosterManager !== 'undefined') {
-            const classified = RosterManager.autoClassifyRollNumber(r.rollNo);
-            if (r.year !== classified.year) {
-              r.year = classified.year;
-              updated = true;
-            }
+
           }
         });
         if (updated) saveLogs(false);

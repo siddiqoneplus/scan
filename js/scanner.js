@@ -342,10 +342,9 @@ const ScannerEngine = (() => {
     const isNewStudent = !student;
 
     // Auto-classify for display
-    const classification = RosterManager.autoClassifyRollNumber(rollNo);
     const studentName = parsed.name || (student ? student.name : `Student ${rollNo}`);
-    const studentBranch = parsed.branch || (student ? student.branch : classification.branch);
-    const studentYear = parsed.year || (student ? student.year : classification.year);
+    const studentBranch = parsed.branch || (student ? student.branch : "General");
+    const studentYear = parsed.year || (student ? student.year : "2024 Batch (1st Year)");
     const studentSection = parsed.section || (student ? student.section : '');
 
     // 2. Event-aware registration check

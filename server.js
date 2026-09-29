@@ -148,10 +148,28 @@ const server = http.createServer(async (req, res) => {
         if (!requireAdmin()) return;
         const body = await parseBody(req);
         const studentsList = Array.isArray(body) ? body : (body.students || []);
-        const normalized = studentsList.map(s => ({
-          ...s,
-          assignedTo: s.assignedTo || body.assignedTo || 'all'
-        }));
+        const rules = await db.getClassificationRules();
+        
+        const normalized = studentsList.map(s => {
+          let classification = db.applyClassificationRules(s.rollNo, rules);
+          let branch = s.branch;
+          let year = s.year;
+          let section = s.section;
+          
+          if (classification) {
+            branch = classification.branch || branch;
+            year = classification.academicYear || year;
+            section = classification.section || section;
+          }
+          
+          return {
+            ...s,
+            branch,
+            year,
+            section,
+            assignedTo: s.assignedTo || body.assignedTo || 'all'
+          };
+        });
         await db.saveStudents(normalized);
         return sendJson(res, 200, { success: true, count: normalized.length, students: normalized });
       }
@@ -176,6 +194,33 @@ const server = http.createServer(async (req, res) => {
       const filtered = current.filter(s => s.rollNo.toUpperCase() !== rollNo.toUpperCase());
       await db.saveStudents(filtered);
       return sendJson(res, 200, { success: true, removed: rollNo, remaining: filtered.length });
+    }
+
+
+    // --- CLASSIFICATION RULES API ---
+    if (reqPath === '/api/rules') {
+      if (req.method === 'GET') {
+        if (!requireAdmin()) return;
+        const rules = await db.getClassificationRules();
+        return sendJson(res, 200, { success: true, rules });
+      }
+      if (req.method === 'POST') {
+        if (!requireAdmin()) return;
+        const body = await parseBody(req);
+        try {
+           const rule = await db.saveClassificationRule(body);
+           return sendJson(res, 200, { success: true, rule });
+        } catch (e) {
+           return sendJson(res, 400, { success: false, error: e.message });
+        }
+      }
+      if (req.method === 'DELETE') {
+        if (!requireAdmin()) return;
+        const body = await parseBody(req);
+        if (!body.id) return sendJson(res, 400, { success: false, error: 'Rule ID required' });
+        await db.deleteClassificationRule(body.id);
+        return sendJson(res, 200, { success: true });
+      }
     }
 
     // 2. ROSTER IMPORT API

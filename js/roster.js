@@ -64,7 +64,7 @@ const RosterManager = (() => {
             updated = true;
           }
           if (s.rollNo) {
-            const classified = autoClassifyRollNumber(s.rollNo);
+            const classified = { branch: s.branch || "General", year: s.year || "2024 Batch (1st Year)" };
             if (s.year !== classified.year) {
               s.year = classified.year;
               updated = true;
@@ -164,73 +164,6 @@ const RosterManager = (() => {
   /**
    * Intelligently classifies Branch and Academic Year/Batch from Roll Number patterns
    */
-  function autoClassifyRollNumber(rawRollNo) {
-    if (!rawRollNo) return { branch: 'General', year: '2024 Batch (1st Year)' };
-    const roll = rawRollNo.trim().toUpperCase();
-
-    let detectedYear = '2024 Batch (1st Year)';
-    let detectedBranch = 'Data Science (DS)';
-
-    // Pattern 1: Hyphen format like 24-DS-045 or 24-AIML-001 or 24-CAI-012
-    const hyphenMatch = roll.match(/^(\d{2})-([A-Z0-9]+)-\d+$/);
-    if (hyphenMatch) {
-      const yearPrefix = parseInt(hyphenMatch[1], 10);
-      const branchCode = hyphenMatch[2];
-      detectedYear = calculateAcademicYear(yearPrefix);
-      detectedBranch = branchCodes[branchCode] || `${branchCode} Department`;
-      return { branch: detectedBranch, year: detectedYear };
-    }
-
-    // Pattern 2: University format like 24A81A4401 (24=Batch, A8=College, 1A=Degree, 44=Branch, 01=Seq)
-    const univMatch = roll.match(/^(\d{2})[A-Z0-9]{4}(\d{2})[A-Z0-9]+$/);
-    if (univMatch) {
-      const yearPrefix = parseInt(univMatch[1], 10);
-      const branchCode = univMatch[2];
-      detectedYear = calculateAcademicYear(yearPrefix);
-      detectedBranch = branchCodes[branchCode] || `Branch (${branchCode})`;
-      return { branch: detectedBranch, year: detectedYear };
-    }
-
-    // Pattern 3: Short prefix like 24DS012 or 24AIML055 or 24CAI001
-    const shortMatch = roll.match(/^(\d{2})([A-Z]{2,5})\d+$/);
-    if (shortMatch) {
-      const yearPrefix = parseInt(shortMatch[1], 10);
-      const branchCode = shortMatch[2];
-      detectedYear = calculateAcademicYear(yearPrefix);
-      detectedBranch = branchCodes[branchCode] || `${branchCode} Department`;
-      return { branch: detectedBranch, year: detectedYear };
-    }
-
-    // Pattern 4: Check if starts with 2-digit year (e.g. 24...)
-    const yearLead = roll.match(/^(\d{2})/);
-    if (yearLead) {
-      detectedYear = calculateAcademicYear(parseInt(yearLead[1], 10));
-    }
-
-    // Check for branch keywords inside roll (avoid numeric false matches)
-    for (const [key, name] of Object.entries(branchCodes)) {
-      if (isNaN(key) && roll.includes(key)) {
-        detectedBranch = name;
-        break;
-      }
-    }
-
-    return { branch: detectedBranch, year: detectedYear };
-  }
-
-  function calculateAcademicYear(joinYear2Digit) {
-    const fullYear = 2000 + joinYear2Digit;
-    const batchMap = {
-      26: '1st Year',
-      25: '2nd Year',
-      24: '3rd Year',
-      23: '4th Year'
-    };
-
-    const yearLevel = batchMap[joinYear2Digit] || (joinYear2Digit >= 26 ? '1st Year' : (joinYear2Digit <= 23 ? '4th Year' : '1st Year'));
-    return `${fullYear} Batch (${yearLevel})`;
-  }
-
   /**
    * Check if a roll number is in the whitelist and assigned to the user
    */
@@ -287,12 +220,11 @@ const RosterManager = (() => {
       throw new Error(`Roll Number ${cleanRoll} is already registered.`);
     }
 
-    const classification = autoClassifyRollNumber(cleanRoll);
     const newStudent = {
       rollNo: cleanRoll,
       name: name.trim(),
-      branch: branch && branch.trim() !== '' ? branch.trim() : classification.branch,
-      year: year && year.trim() !== '' ? year.trim() : classification.year,
+      branch: branch && branch.trim() !== '' ? branch.trim() : "General",
+      year: year && year.trim() !== '' ? year.trim() : "2024 Batch (1st Year)",
       section: section ? section.trim().toUpperCase() : '',
       assignedTo: assignedTo && assignedTo.trim() !== '' ? assignedTo.trim() : 'all',
       addedAt: new Date().toISOString()
@@ -569,7 +501,7 @@ const RosterManager = (() => {
     updateStudent,
     deleteStudent,
     assignAllStudents,
-    autoClassifyRollNumber,
+    
     importGoogleFormCSV,
     resetToDefault,
     clearAll,
