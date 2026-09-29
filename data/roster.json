@@ -1,20 +1,29 @@
 [
   {
-    "rollNo": "QR1",
-    "name": "Valid Student",
-    "branch": "",
-    "year": "",
-    "section": "",
-    "assignedTo": "all",
+    "rollNo": "M1",
+    "name": "Manual 1",
+    "branch": "General",
+    "year": "2024 Batch (3rd Year)",
+    "section": "A",
+    "assignedTo": "employee",
     "status": "active"
   },
   {
-    "rollNo": "QR2",
-    "name": "Inactive Student",
-    "branch": "",
-    "year": "",
+    "rollNo": "M2",
+    "name": "Manual 2",
+    "branch": "General",
+    "year": "2024 Batch (3rd Year)",
+    "section": "B",
+    "assignedTo": "admin",
+    "status": "active"
+  },
+  {
+    "rollNo": "M3",
+    "name": "Manual 3",
+    "branch": "General",
+    "year": "2024 Batch (3rd Year)",
     "section": "",
-    "assignedTo": "all",
+    "assignedTo": "employee",
     "status": "inactive"
   }
 ]

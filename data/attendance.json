@@ -1,28 +1,17 @@
 [
   {
-    "id": "att-1790674969752-fus96",
-    "branch": "",
+    "id": "att-1790675497163-psft1",
+    "branch": "General",
     "date": "2026-09-29",
     "eventId": null,
     "markedBy": "Staff Member",
-    "name": "Inactive Student",
-    "rollNo": "QR2",
-    "section": "",
-    "session": "Attendance",
-    "timestamp": "03:12:49 PM",
-    "year": ""
-  },
-  {
-    "id": "att-1790674968976-u3urw",
-    "branch": "",
-    "date": "2026-09-29",
-    "eventId": null,
-    "markedBy": "Staff Member",
-    "name": "Valid Student",
-    "rollNo": "QR1",
-    "section": "",
-    "session": "Attendance",
-    "timestamp": "03:12:48 PM",
-    "year": ""
+    "name": "Manual 1",
+    "rollNo": "M1",
+    "section": "A",
+    "session": "Morning",
+    "status": "Present",
+    "timestamp": "03:21:36 PM",
+    "walkIn": false,
+    "year": "2024 Batch (3rd Year)"
   }
 ]

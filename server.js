@@ -256,6 +256,96 @@ const server = http.createServer(async (req, res) => {
         
         return sendJson(res, 200, { success: true, logs });
       }
+
+      if (req.method === 'POST') {
+        const body = await parseBody(req);
+        
+        if (!body || typeof body !== 'object') {
+          return sendJson(res, 400, { success: false, error: 'Invalid request body' });
+        }
+
+        const allowedRolls = await getAllowedRolls();
+        const roster = await db.getStudents();
+        const today = new Date().toISOString().split('T')[0];
+        const nowTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        const existingLogs = await db.getAttendance();
+
+        // Helper to process a single record securely
+        const processRecord = (reqRecord) => {
+          if (!reqRecord.rollNo || !reqRecord.session) {
+             throw new Error('Missing rollNo or session');
+          }
+          const cleanRoll = reqRecord.rollNo.toUpperCase();
+          const student = roster.find(s => s.rollNo.toUpperCase() === cleanRoll);
+          if (!student) throw new Error(`Student ${cleanRoll} not found`);
+          if (student.status === 'inactive') throw new Error(`Student ${cleanRoll} is inactive`);
+          if (allowedRolls !== null && !allowedRolls.has(cleanRoll)) {
+             throw new Error(`Unauthorized for student ${cleanRoll}`);
+          }
+          if (reqRecord.section && student.section && student.section.toUpperCase() !== reqRecord.section.toUpperCase()) {
+             throw new Error(`Student ${cleanRoll} does not match section ${reqRecord.section}`);
+          }
+          
+          return {
+            id: reqRecord.id || ('att-' + Date.now() + '-' + Math.random().toString(36).substr(2, 5)),
+            rollNo: student.rollNo,
+            name: student.name,
+            branch: student.branch,
+            year: student.year,
+            section: student.section || '',
+            session: reqRecord.session,
+            date: today,
+            timestamp: nowTime,
+            eventId: reqRecord.eventId || null,
+            status: reqRecord.status || 'Present',
+            walkIn: reqRecord.walkIn || false,
+            markedBy: user.displayName || user.username
+          };
+        };
+
+        if (body.record) {
+           try {
+              const secureRecord = processRecord(body.record);
+              const isDuplicate = existingLogs.find(r => r.rollNo === secureRecord.rollNo && r.date === today && r.session === secureRecord.session && r.eventId === secureRecord.eventId);
+              if (isDuplicate) return sendJson(res, 400, { success: false, error: 'Duplicate attendance' });
+              
+              await db.addAttendanceRecord(secureRecord);
+           } catch (e) {
+              return sendJson(res, 400, { success: false, error: e.message });
+           }
+        } 
+        else if (body.logs && Array.isArray(body.logs)) {
+           try {
+              const secureLogs = body.logs.map(processRecord);
+              const newValidLogs = [];
+              for (const sl of secureLogs) {
+                 const isDup = existingLogs.find(r => r.rollNo === sl.rollNo && r.date === today && r.session === sl.session && r.eventId === sl.eventId);
+                 if (!isDup) newValidLogs.push(sl);
+              }
+              if (newValidLogs.length > 0) {
+                 await db.saveAttendance([...existingLogs, ...newValidLogs]);
+              }
+           } catch (e) {
+              return sendJson(res, 400, { success: false, error: e.message });
+           }
+        } else if (body.rollNo && body.session) {
+           try {
+              const secureRecord = processRecord(body);
+              const isDuplicate = existingLogs.find(r => r.rollNo === secureRecord.rollNo && r.date === today && r.session === secureRecord.session && r.eventId === secureRecord.eventId);
+              if (isDuplicate) return sendJson(res, 400, { success: false, error: 'Duplicate attendance' });
+              await db.addAttendanceRecord(secureRecord);
+           } catch (e) {
+              return sendJson(res, 400, { success: false, error: e.message });
+           }
+        } else {
+           return sendJson(res, 400, { success: false, error: 'Invalid payload format' });
+        }
+
+        const logsAfter = await db.getAttendance();
+        const filteredLogs = allowedRolls !== null ? logsAfter.filter(log => allowedRolls.has((log.rollNo || '').toUpperCase())) : logsAfter;
+        return sendJson(res, 200, { success: true, count: filteredLogs.length, logs: filteredLogs });
+      }
+
       if (req.method === 'DELETE') {
         const body = await parseBody(req);
         const recordId = body.id || params.get('id') || 'all';

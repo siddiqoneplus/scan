@@ -258,6 +258,7 @@ async function importStudents(incoming, assignedTo = 'all') {
       year: student.year || '2024 Batch (3rd Year)',
       section: student.section || '',
       assignedTo: student.assignedTo || assignedTo,
+      status: student.status || 'active',
       importedAt: new Date().toISOString()
     };
 
