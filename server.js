@@ -127,28 +127,6 @@ const server = http.createServer(async (req, res) => {
       }
     }
 
-    if (reqPath === '/api/db/test') {
-      if (req.method === 'POST') {
-        if (!requireAdmin()) return;
-        const body = await parseBody(req);
-        const result = await db.testConnection(body.uri);
-        return sendJson(res, 200, result);
-      }
-    }
-
-    if (reqPath === '/api/db/configure') {
-      if (req.method === 'POST') {
-        if (!requireAdmin()) return;
-        const body = await parseBody(req);
-        if (!body.uri) {
-          return sendJson(res, 400, { success: false, error: 'MongoDB URI is required' });
-        }
-        const connected = await db.updateUriAndConnect(body.uri, body.dbName || 'smart_attendance');
-        const status = await db.getStatus();
-        return sendJson(res, 200, { success: connected, db: status });
-      }
-    }
-
     // 1. ROSTER API
     if (reqPath === '/api/roster') {
       if (req.method === 'GET') {

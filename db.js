@@ -668,79 +668,19 @@ async function getStatus() {
     counts.accounts = readJsonFile('accounts.json', []).length;
   }
 
-  // Mask URI for security
-  let maskedUri = '';
-  if (activeUri) {
-    maskedUri = activeUri.replace(/:\/\/([^:]+):([^@]+)@/, '://$1:••••••••@');
-  }
-
   return {
     connected: isConnected,
     mode: isConnected ? 'mongodb_atlas' : 'local_json',
     dbName: activeDbName,
     uriConfigured: Boolean(activeUri && activeUri.trim()),
-    maskedUri: maskedUri,
-    lastError: lastError,
     counts: counts
   };
 }
 
-async function testConnection(testUri) {
-  if (!testUri || !testUri.trim()) {
-    return { success: false, error: 'Connection URI string is required.' };
-  }
-
-  let testClient = null;
-  try {
-    testClient = new MongoClient(testUri, {
-      serverSelectionTimeoutMS: 5000,
-      connectTimeoutMS: 5000
-    });
-    await testClient.connect();
-    const adminDb = testClient.db().admin();
-    const pingResult = await adminDb.ping();
-    await testClient.close();
-    return { success: true, message: 'Successfully connected and pinged MongoDB Atlas!' };
-  } catch (err) {
-    if (testClient) {
-      try { await testClient.close(); } catch (e) {}
-    }
-    return { success: false, error: err.message };
-  }
-}
-
-async function updateUriAndConnect(newUri, dbName = 'smart_attendance') {
-  // Update .env file
-  const envPath = path.join(__dirname, '.env');
-  let envContent = '';
-  if (fs.existsSync(envPath)) {
-    envContent = fs.readFileSync(envPath, 'utf8');
-    if (envContent.includes('MONGODB_URI=')) {
-      envContent = envContent.replace(/MONGODB_URI=.*(\r?\n|$)/, `MONGODB_URI=${newUri}$1`);
-    } else {
-      envContent += `\nMONGODB_URI=${newUri}\n`;
-    }
-    if (envContent.includes('DB_NAME=')) {
-      envContent = envContent.replace(/DB_NAME=.*(\r?\n|$)/, `DB_NAME=${dbName}$1`);
-    } else {
-      envContent += `DB_NAME=${dbName}\n`;
-    }
-  } else {
-    envContent = `PORT=3000\nMONGODB_URI=${newUri}\nDB_NAME=${dbName}\n`;
-  }
-  fs.writeFileSync(envPath, envContent, 'utf8');
-
-  // Re-run connect
-  process.env.MONGODB_URI = newUri;
-  process.env.DB_NAME = dbName;
-  return await connect(newUri, dbName);
-}
 
 module.exports = {
   connect,
   getStatus,
-  testConnection,
-  updateUriAndConnect,
   getStudents,
   saveStudents,
   importStudents,
