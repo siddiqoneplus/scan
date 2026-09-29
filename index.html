@@ -177,7 +177,27 @@
         </div>
         <div class="kpi-icon amber">
           <i class="fa-solid fa-barcode"></i>
+
         </div>
+        
+        <!-- Pagination Controls -->
+        <div id="analyticsPagination" style="display: flex; justify-content: space-between; align-items: center; padding: 15px 0; border-top: 1px solid rgba(255,255,255,0.1);">
+           <div style="color: #a4b0be; font-size: 0.9rem;">
+             Showing <span id="pageStart">0</span>-<span id="pageEnd">0</span> of <span id="pageTotal">0</span>
+           </div>
+           <div class="flex-gap-xs">
+             <button class="btn btn-secondary btn-sm" id="btnPagePrev" onclick="App.changeAnalyticsPage(-1)"><i class="fa-solid fa-chevron-left"></i> Prev</button>
+             <span style="padding: 0 10px; align-self: center;" id="pageIndicator">Page 1 / 1</span>
+             <button class="btn btn-secondary btn-sm" id="btnPageNext" onclick="App.changeAnalyticsPage(1)">Next <i class="fa-solid fa-chevron-right"></i></button>
+           </div>
+        </div>
+        
+        <div id="analyticsEmptyState" style="display: none; text-align: center; padding: 40px; color: #a4b0be;">
+           <i class="fa-solid fa-folder-open fa-3x mb-3" style="color: rgba(255,255,255,0.1);"></i>
+           <h3 style="color: var(--text-main);">No records found</h3>
+           <p>Try adjusting your filters or date range.</p>
+        </div>
+
       </div>
     </section>
 
@@ -335,6 +355,74 @@
     <!-- TAB 2: ADMIN & GOOGLE FORM SYNC -->
     <section id="section-roster" class="tab-section">
       
+      
+      <!-- Admin Dashboard -->
+      <div class="admin-card admin-only-el" id="adminDashboardCard" style="display: none; margin-bottom: 20px;">
+        <div class="section-toolbar" style="border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 15px; margin-bottom: 15px;">
+          <h3 style="margin: 0;"><i class="fa-solid fa-chart-line"></i> Admin Overview</h3>
+          <button class="btn btn-secondary btn-sm" onclick="App.refreshAdminDashboard()">
+             <i class="fa-solid fa-rotate-right"></i> Refresh
+          </button>
+        </div>
+        
+        <div id="dashboardLoader" style="display: flex; flex-direction: column; align-items: center; padding: 20px;">
+           <i class="fa-solid fa-circle-notch fa-spin fa-2x mb-2" style="color: var(--cyan);"></i>
+           <span style="margin-top: 10px;">Loading statistics...</span>
+        </div>
+        <div id="dashboardError" style="display: none; color: #ff4757; text-align: center; padding: 20px;">
+           <i class="fa-solid fa-circle-xmark fa-2x mb-2"></i>
+           <div id="dashboardErrorText" style="margin-top: 10px;">Failed to load data.</div>
+        </div>
+        
+        <div id="dashboardContent" style="display: none;">
+          <div class="dashboard-kpis" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 15px; margin-bottom: 20px;">
+            <div class="kpi-card" style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 10px; text-align: center; border: 1px solid rgba(255,255,255,0.1);">
+               <div style="font-size: 0.75rem; color: #a4b0be; text-transform: uppercase; margin-bottom: 5px;">Total Students</div>
+               <div style="font-size: 1.8rem; font-weight: bold; color: var(--cyan);" id="dashTotalStudents">0</div>
+            </div>
+            <div class="kpi-card" style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 10px; text-align: center; border: 1px solid rgba(255,255,255,0.1);">
+               <div style="font-size: 0.75rem; color: #a4b0be; text-transform: uppercase; margin-bottom: 5px;">Employees</div>
+               <div style="font-size: 1.8rem; font-weight: bold; color: var(--purple);" id="dashTotalEmployees">0</div>
+            </div>
+            <div class="kpi-card" style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 10px; text-align: center; border: 1px solid rgba(255,255,255,0.1);">
+               <div style="font-size: 0.75rem; color: #a4b0be; text-transform: uppercase; margin-bottom: 5px;">Sessions Today</div>
+               <div style="font-size: 1.8rem; font-weight: bold; color: var(--emerald);" id="dashTotalSessions">0</div>
+            </div>
+            <div class="kpi-card" style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 10px; text-align: center; border: 1px solid rgba(255,255,255,0.1);">
+               <div style="font-size: 0.75rem; color: #a4b0be; text-transform: uppercase; margin-bottom: 5px;">Present Today</div>
+               <div style="font-size: 1.8rem; font-weight: bold; color: #2ed573;" id="dashTotalPresent">0</div>
+            </div>
+            <div class="kpi-card" style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 10px; text-align: center; border: 1px solid rgba(255,255,255,0.1);">
+               <div style="font-size: 0.75rem; color: #a4b0be; text-transform: uppercase; margin-bottom: 5px;">Absent Today</div>
+               <div style="font-size: 1.8rem; font-weight: bold; color: #ff4757;" id="dashTotalAbsent">0</div>
+            </div>
+          </div>
+          
+          <h4 style="margin-bottom: 10px; font-weight: 500;">Today's Sessions</h4>
+          <div class="table-container">
+            <table class="custom-table">
+              <thead>
+                <tr>
+                  <th>Subject</th>
+                  <th>Period</th>
+                  <th>Section</th>
+                  <th>Employee</th>
+                  <th>Present/Total</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody id="dashboardSessionsTable">
+                <!-- Rows injected by JS -->
+              </tbody>
+            </table>
+          </div>
+          <div id="dashboardEmptySessions" style="display: none; text-align: center; padding: 20px; color: #a4b0be; background: rgba(255,255,255,0.02); border-radius: 8px;">
+             <i class="fa-solid fa-bed" style="font-size: 1.5rem; margin-bottom: 10px;"></i><br>
+             No attendance sessions have been created today.
+          </div>
+        </div>
+      </div>
+
       <!-- Google Form Integration Info Banner -->
       <div class="google-form-banner">
         <div class="gform-desc">
@@ -555,14 +643,18 @@
       <div class="admin-card">
         <div class="section-toolbar">
           <div class="search-filter-group">
-            <div class="flex-gap-xs">
-              <input type="date" id="analyticsFilterDate" class="input-styled analytics-date-picker" title="Filter Attendance by Date" aria-label="Filter Attendance by Date" placeholder="YYYY-MM-DD">
-              <button type="button" class="btn btn-secondary btn-sm" onclick="App.clearAnalyticsDateFilter()" title="Show records from all dates">
-                <i class="fa-solid fa-calendar-xmark"></i> All Dates
+            <div class="flex-gap-xs" style="grid-column: 1 / -1; flex-wrap: wrap;">
+              <input type="date" id="analyticsFilterStartDate" class="input-styled analytics-date-picker" title="Start Date" aria-label="Start Date">
+              <span style="color:#a4b0be; align-self:center;">to</span>
+              <input type="date" id="analyticsFilterEndDate" class="input-styled analytics-date-picker" title="End Date" aria-label="End Date">
+              <button type="button" class="btn btn-secondary btn-sm" onclick="App.clearAnalyticsDateFilter()" title="Clear Dates">
+                <i class="fa-solid fa-calendar-xmark"></i> Clear
               </button>
             </div>
             
             <input type="text" id="analyticsSearch" class="input-styled" placeholder="Filter by roll number or name..." title="Filter by roll number or name">
+            <input type="text" id="analyticsFilterSubject" class="input-styled" placeholder="Filter Subject..." title="Filter Subject">
+            <input type="text" id="analyticsFilterEmployee" class="input-styled" placeholder="Filter Employee..." title="Filter Employee">
 
             <select id="analyticsFilterBranch" class="select-styled" title="Filter Logs by Branch" aria-label="Filter Logs by Branch">
               <option value="ALL">All Branches</option>
@@ -616,16 +708,16 @@
         <!-- Attendance Records Table -->
         <div class="table-container">
           <table class="custom-table" id="analyticsTable">
-            <thead>
               <tr>
                 <th class="col-w-50">#</th>
                 <th>Roll Number</th>
                 <th>Student Name</th>
-                <th>Branch</th>
-                <th>Year</th>
                 <th>Section</th>
-                <th>Check-in Time</th>
-                <th>Marked By</th>
+                <th>Subject</th>
+                <th>Date</th>
+                <th>Status</th>
+                <th>Scan Time</th>
+                <th>Employee</th>
                 <th class="text-right admin-only-el">Action</th>
               </tr>
             </thead>
@@ -1313,5 +1405,111 @@
   <script src="js/session.js"></script>
   <script src="js/scanner.js"></script>
   <script src="js/app.js"></script>
+
+  <!-- MODAL: EDIT ATTENDANCE RECORD (Admin Only) -->
+  <div class="modal-backdrop" id="modalEditRecord">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3><i class="fa-solid fa-pen-to-square modal-icon-emerald"></i> Edit Attendance Record</h3>
+        <button type="button" class="btn btn-secondary btn-icon" onclick="App.closeModal('modalEditRecord')">&times;</button>
+      </div>
+      <form id="formEditRecord" onsubmit="App.submitEditRecord(event)">
+        <input type="hidden" id="editRecordId">
+        <div class="modal-body">
+          <p class="text-muted" style="margin-bottom: 15px; font-size: 0.9rem;">
+            <i class="fa-solid fa-circle-info"></i> Historical data cannot be silently modified. All changes are logged to the audit trail.
+          </p>
+          
+          <div class="form-group">
+            <label>Student</label>
+            <input type="text" id="editRecordStudent" class="input-styled" disabled style="opacity: 0.7;">
+          </div>
+          
+          <div class="form-group">
+            <label>Original Scan Time</label>
+            <input type="text" id="editRecordTime" class="input-styled" disabled style="opacity: 0.7;">
+          </div>
+          
+          <div class="form-group">
+            <label for="editRecordStatus">New Status *</label>
+            <select id="editRecordStatus" class="input-styled w-full" required>
+              <option value="Present">Present</option>
+              <option value="Absent">Absent</option>
+              <option value="Invalid">Invalid (Discard)</option>
+            </select>
+          </div>
+          
+          <div class="form-group">
+            <label for="editRecordReason">Reason for Change (Optional)</label>
+            <input type="text" id="editRecordReason" class="input-styled" placeholder="e.g. Scanned wrong QR, manually verified">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" onclick="App.closeModal('modalEditRecord')">Cancel</button>
+          <button type="submit" class="btn btn-primary"><i class="fa-solid fa-check"></i> Confirm Edit</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+
+  <!-- MODAL: AUDIT LOGS VIEWER (Admin Only) -->
+  <div class="modal-backdrop" id="modalAuditViewer">
+    <div class="modal-box" style="max-width: 1000px;">
+      <div class="modal-header">
+        <h3><i class="fa-solid fa-shield-halved modal-icon-emerald"></i> System Audit Logs</h3>
+        <button type="button" class="btn btn-secondary btn-icon" onclick="App.closeModal('modalAuditViewer')">&times;</button>
+      </div>
+      <div class="modal-body" style="padding-top: 0;">
+        <div class="section-toolbar" style="margin-bottom: 15px; padding-bottom: 15px; border-bottom: 1px solid rgba(255,255,255,0.1);">
+          <div class="search-filter-group">
+            <select id="auditFilterAction" class="select-styled" onchange="App.fetchAuditLogs(1)">
+              <option value="">All Actions</option>
+              <option value="login">Login</option>
+              <option value="employee created">Employee Created</option>
+              <option value="employee updated">Employee Updated</option>
+              <option value="employee deactivated">Employee Deactivated</option>
+              <option value="student created">Student Created</option>
+              <option value="student updated">Student Updated</option>
+              <option value="student deactivated">Student Deactivated</option>
+              <option value="attendance session started">Session Started</option>
+              <option value="attendance session stopped">Session Stopped</option>
+              <option value="attendance modified">Attendance Modified</option>
+              <option value="important configuration changes">Config Changes</option>
+            </select>
+            <input type="text" id="auditFilterActor" class="input-styled" placeholder="Filter by Actor (Username)" oninput="App.delayFetchAudit()">
+            <button class="btn btn-secondary btn-sm" onclick="App.fetchAuditLogs(1)"><i class="fa-solid fa-rotate-right"></i> Refresh</button>
+          </div>
+        </div>
+        
+        <div class="table-container" style="max-height: 400px; overflow-y: auto;">
+          <table class="custom-table">
+            <thead style="position: sticky; top: 0; background: var(--bg-card); z-index: 10;">
+              <tr>
+                <th>Timestamp</th>
+                <th>Actor</th>
+                <th>Role</th>
+                <th>Action</th>
+                <th>Resource / Target</th>
+                <th>Metadata</th>
+              </tr>
+            </thead>
+            <tbody id="auditTableBody">
+               <tr><td colspan="6" style="text-align:center;">Loading audit logs...</td></tr>
+            </tbody>
+          </table>
+        </div>
+        
+        <div style="display: flex; justify-content: space-between; margin-top: 15px; color: #a4b0be; font-size: 0.9rem;">
+           <div>Showing <span id="auditPageIndicator">Page 1</span></div>
+           <div class="flex-gap-xs">
+             <button class="btn btn-secondary btn-sm" id="btnAuditPrev" onclick="App.changeAuditPage(-1)"><i class="fa-solid fa-chevron-left"></i> Prev</button>
+             <button class="btn btn-secondary btn-sm" id="btnAuditNext" onclick="App.changeAuditPage(1)">Next <i class="fa-solid fa-chevron-right"></i></button>
+           </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
 </body>
 </html>

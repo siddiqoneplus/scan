@@ -57,6 +57,7 @@ const App = (() => {
       renderSimulatorChips();
       QRStudio.renderStudentBadges();
       AttendanceManager.renderCharts();
+      fetchAndRenderHistory(1);
     });
 
     // Listen for attendance updates
@@ -205,6 +206,86 @@ const App = (() => {
     });
   }
 
+  
+  async function refreshAdminDashboard() {
+    const card = document.getElementById('adminDashboardCard');
+    const loader = document.getElementById('dashboardLoader');
+    const content = document.getElementById('dashboardContent');
+    const errorDiv = document.getElementById('dashboardError');
+    const errorText = document.getElementById('dashboardErrorText');
+    const emptyDiv = document.getElementById('dashboardEmptySessions');
+    const tbody = document.getElementById('dashboardSessionsTable');
+    
+    if (!card) return;
+    
+    // Only fetch if admin
+    const session = AuthManager.getSession();
+    if (!session || session.role !== 'admin') {
+       card.style.display = 'none';
+       return;
+    }
+    
+    card.style.display = 'block';
+    loader.style.display = 'flex';
+    content.style.display = 'none';
+    errorDiv.style.display = 'none';
+    
+    try {
+      const res = await fetch('/api/admin/dashboard', {
+         headers: { 'Authorization': 'Bearer ' + (localStorage.getItem('auth_token') || '') }
+      });
+      const data = await res.json();
+      
+      loader.style.display = 'none';
+      
+      if (!res.ok || !data.success) {
+         errorText.innerText = data.error || 'Failed to load dashboard data.';
+         errorDiv.style.display = 'block';
+         return;
+      }
+      
+      content.style.display = 'block';
+      
+      document.getElementById('dashTotalStudents').innerText = data.totalStudents;
+      document.getElementById('dashTotalEmployees').innerText = data.totalEmployees;
+      document.getElementById('dashTotalSessions').innerText = data.totalSessions;
+      document.getElementById('dashTotalPresent').innerText = data.presentCount;
+      document.getElementById('dashTotalAbsent').innerText = data.absentCount;
+      
+      if (data.sessionsToday && data.sessionsToday.length > 0) {
+         emptyDiv.style.display = 'none';
+         tbody.parentNode.style.display = 'table';
+         tbody.innerHTML = '';
+         
+         data.sessionsToday.forEach(s => {
+            const tr = document.createElement('tr');
+            
+            const statusColor = s.status === 'active' ? '#2ed573' : '#a4b0be';
+            const statusLabel = s.status === 'active' ? 'Active' : 'Completed';
+            
+            tr.innerHTML = `
+              <td><strong>${escapeHtml(s.subject)}</strong></td>
+              <td>${escapeHtml(s.period)}</td>
+              <td><span class="tag tag-section">Sec ${escapeHtml(s.section)}</span></td>
+              <td><i class="fa-solid fa-user-tie" style="color:#a4b0be;"></i> ${escapeHtml(s.employee)}</td>
+              <td><strong>${s.presentCount}</strong> / ${s.totalCount}</td>
+              <td><span style="color: ${statusColor}; font-weight:bold;">${statusLabel}</span></td>
+            `;
+            tbody.appendChild(tr);
+         });
+      } else {
+         emptyDiv.style.display = 'block';
+         tbody.parentNode.style.display = 'none';
+      }
+      
+    } catch (err) {
+      loader.style.display = 'none';
+      errorText.innerText = 'Network error loading dashboard.';
+      errorDiv.style.display = 'block';
+    }
+  }
+
+
   function switchTab(tabId) {
     activeTab = tabId;
 
@@ -247,12 +328,12 @@ const App = (() => {
   }
 
   function refreshAllViews() {
-    updateKPIs();
-    renderLiveTicker();
-    renderRosterTable();
-    renderAttendanceTable();
-    renderSimulatorChips();
-    QRStudio.renderStudentBadges();
+    refreshKPIs();
+    updateLiveTicker();
+    if (document.getElementById('section-analytics').classList.contains('active')) {
+      fetchAndRenderHistory(analyticsCurrentPage);
+      AttendanceManager.renderCharts();
+    }
   }
 
   function updateKPIs() {
@@ -535,34 +616,24 @@ const App = (() => {
     const tbody = document.getElementById('attendanceTableBody');
     if (!tbody) return;
 
-    if (!records) {
-      records = AttendanceManager.getAllLogs();
-    }
-
-    if (records.length === 0) {
-      tbody.innerHTML = `
-        <tr>
-          <td colspan="10" class="empty-placeholder">
-            No attendance records logged for this filter.
-          </td>
-        </tr>
-      `;
-      return;
-    }
+    if (!records) return; // Should be passed by fetchAndRenderHistory now
 
     const isAdmin = AuthManager.isAdmin();
 
     tbody.innerHTML = records.map((r, idx) => {
+      const displaySubject = r.subject ? escapeHtml(r.subject) : 'General';
+      const displayEmployee = r.sessionEmployee ? escapeHtml(r.sessionEmployee) : escapeHtml(r.markedBy);
       return `
       <tr>
-        <td class="text-subtle col-w-50">${idx + 1}</td>
+        <td class="text-subtle col-w-50">${idx + 1 + ((analyticsCurrentPage - 1) * 50)}</td>
         <td class="font-mono font-semibold text-white">${escapeHtml(r.rollNo)}</td>
         <td><strong>${escapeHtml(r.name)}</strong></td>
-        <td><span class="tag tag-branch">${escapeHtml(r.branch)}</span></td>
-        <td><span class="tag tag-year">${escapeHtml(r.year)}</span></td>
         <td>${r.section ? `<span class="tag tag-section">Sec ${escapeHtml(r.section)}</span>` : '<span class="text-subtle">-</span>'}</td>
+        <td><span class="tag" style="background:rgba(255,255,255,0.1); border-color:rgba(255,255,255,0.2);">${displaySubject}</span></td>
+        <td class="font-mono text-subtle">${escapeHtml(r.date)}</td>
+        <td><span style="color:#2ed573; font-weight:bold;">PRESENT</span></td>
         <td class="font-mono text-cyan">${escapeHtml(r.timestamp)}</td>
-        <td><span class="tag tag-session"><i class="fa-solid fa-id-badge"></i> ${escapeHtml(r.markedBy || 'Staff Member')}</span></td>
+        <td><span class="tag tag-session"><i class="fa-solid fa-user-tie"></i> ${displayEmployee}</span></td>
         <td class="text-right ${isAdmin ? '' : 'admin-only-el'}">
           ${isAdmin ? `<button class="btn btn-danger btn-sm" onclick="App.deleteRecord('${r.id}')" title="Delete record">
             <i class="fa-solid fa-trash"></i>
@@ -575,6 +646,86 @@ const App = (() => {
     // Hide clear logs button for non-admins
     const clearBtn = document.querySelector('[onclick="App.clearAttendanceLogs()"]');
     if (clearBtn) clearBtn.style.display = isAdmin ? '' : 'none';
+  }
+
+  
+  let auditCurrentPage = 1;
+  let auditTotalPages = 1;
+  let auditDelayTimer = null;
+  
+  function delayFetchAudit() {
+     clearTimeout(auditDelayTimer);
+     auditDelayTimer = setTimeout(() => fetchAuditLogs(1), 400);
+  }
+
+  function openAuditViewer() {
+    openModal('modalAuditViewer');
+    fetchAuditLogs(1);
+  }
+  
+  function changeAuditPage(delta) {
+    const newPage = auditCurrentPage + delta;
+    if (newPage >= 1 && newPage <= auditTotalPages) {
+       fetchAuditLogs(newPage);
+    }
+  }
+  
+  async function fetchAuditLogs(page = 1) {
+    const actionFilter = document.getElementById('auditFilterAction').value;
+    const actorFilter = document.getElementById('auditFilterActor').value;
+    
+    const query = new URLSearchParams({ page: page, limit: 50 });
+    if (actionFilter) query.append('action', actionFilter);
+    if (actorFilter) query.append('actor', actorFilter);
+    
+    const tbody = document.getElementById('auditTableBody');
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;"><i class="fa-solid fa-spinner fa-spin"></i> Loading logs...</td></tr>';
+    
+    try {
+       const res = await fetch('/api/audit?' + query.toString(), {
+          headers: { 'Authorization': 'Bearer ' + (localStorage.getItem('auth_token') || '') }
+       });
+       const data = await res.json();
+       
+       if (data.success) {
+          auditCurrentPage = data.pagination.page;
+          auditTotalPages = data.pagination.totalPages;
+          
+          document.getElementById('auditPageIndicator').innerText = `Page ${auditCurrentPage} of ${Math.max(1, auditTotalPages)} (Total: ${data.pagination.total})`;
+          document.getElementById('btnAuditPrev').disabled = auditCurrentPage <= 1;
+          document.getElementById('btnAuditNext').disabled = auditCurrentPage >= auditTotalPages;
+          
+          if (data.data.length === 0) {
+             tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:#a4b0be;">No audit logs found.</td></tr>';
+          } else {
+             tbody.innerHTML = data.data.map(log => {
+                const date = new Date(log.timestamp).toLocaleString();
+                const metaStr = Object.keys(log.metadata || {}).length > 0 ? JSON.stringify(log.metadata) : '-';
+                
+                let actionColor = 'var(--cyan)';
+                if (log.action.includes('deleted') || log.action.includes('deactivated')) actionColor = '#ff4757';
+                else if (log.action.includes('started') || log.action.includes('created')) actionColor = '#2ed573';
+                else if (log.action.includes('login')) actionColor = 'var(--purple)';
+                else if (log.action.includes('modified') || log.action.includes('updated')) actionColor = '#ffa502';
+                
+                return `
+                  <tr>
+                    <td style="font-family:monospace; color:#a4b0be; white-space:nowrap;">${date}</td>
+                    <td><strong style="color:white;">${escapeHtml(log.actor)}</strong></td>
+                    <td><span class="tag tag-branch" style="padding:2px 6px; font-size:0.75rem;">${escapeHtml(log.role)}</span></td>
+                    <td><span style="color:${actionColor}; font-weight:bold; text-transform:uppercase; font-size:0.8rem;">${escapeHtml(log.action)}</span></td>
+                    <td style="font-family:monospace; color:var(--text-main);">${escapeHtml(log.resource)}</td>
+                    <td style="font-size:0.8rem; color:#a4b0be; max-width:200px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title='${escapeHtml(metaStr)}'>${escapeHtml(metaStr)}</td>
+                  </tr>
+                `;
+             }).join('');
+          }
+       } else {
+          tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:#ff4757;">${escapeHtml(data.error || 'Failed to load logs')}</td></tr>`;
+       }
+    } catch (e) {
+       tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:#ff4757;">Network error.</td></tr>';
+    }
   }
 
   function bindModals() {
@@ -870,12 +1021,12 @@ const App = (() => {
   }
 
   function clearAnalyticsDateFilter() {
-    const dateInput = document.getElementById('analyticsFilterDate');
-    if (dateInput) {
-      dateInput.value = '';
-      renderAttendanceTable();
-      showToast('Showing records for all dates', 'info');
-    }
+    const sd = document.getElementById('analyticsFilterStartDate');
+    const ed = document.getElementById('analyticsFilterEndDate');
+    if (sd) sd.value = '';
+    if (ed) ed.value = '';
+    fetchAndRenderHistory(1);
+  }
   }
 
   function deleteStudent(rollNo) {

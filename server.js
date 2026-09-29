@@ -175,6 +175,47 @@ const server = http.createServer(async (req, res) => {
       }
 
       // DELETE: Clear ALL students from DB + local JSON
+      
+      if (req.method === 'PATCH') {
+         if (!requireAdmin()) return;
+         
+         const urlParams = new URL('http://localhost' + req.url).searchParams;
+         const recordId = urlParams.get('id');
+         if (!recordId) return sendJson(res, 400, { success: false, error: 'Record ID required' });
+         
+         const body = await parseBody(req);
+         if (!body.status || !['Present', 'Absent', 'Invalid'].includes(body.status)) {
+            return sendJson(res, 400, { success: false, error: 'Valid status required (Present, Absent, Invalid)' });
+         }
+         
+         try {
+            const logs = await db.getAttendance();
+            const record = logs.find(r => r.id === recordId);
+            if (!record) return sendJson(res, 404, { success: false, error: 'Record not found' });
+            
+            const auditEntry = {
+               oldStatus: record.status || 'Present',
+               newStatus: body.status,
+               changedBy: user.displayName || user.username,
+               timestamp: new Date().toISOString(),
+               reason: body.reason || ''
+            };
+            
+            const auditTrail = record.auditTrail || [];
+            auditTrail.push(auditEntry);
+            
+            const updatedRecord = await db.updateAttendanceRecord(recordId, {
+               status: body.status,
+               auditTrail: auditTrail
+            });
+            
+            logAudit(user, 'attendance modified', recordId, { oldStatus: auditEntry.oldStatus, newStatus: auditEntry.newStatus }); return sendJson(res, 200, { success: true, record: updatedRecord });
+         } catch (e) {
+            return sendJson(res, 500, { success: false, error: e.message });
+         }
+      }
+
+
       if (req.method === 'DELETE') {
         if (!requireAdmin()) return;
         await db.saveStudents([]);
@@ -330,7 +371,186 @@ const server = http.createServer(async (req, res) => {
       }
     }
 
+
+    // --- ADMIN DASHBOARD API ---
+        // --- AUDIT LOGS API ---
+    if (reqPath === '/api/audit') {
+      if (req.method === 'GET') {
+        if (!requireAdmin()) return;
+        try {
+          const urlParams = new URL('http://localhost' + req.url).searchParams;
+          const page = parseInt(urlParams.get('page')) || 1;
+          const limit = parseInt(urlParams.get('limit')) || 50;
+          const actionFilter = urlParams.get('action');
+          const actorFilter = urlParams.get('actor');
+          
+          let logs = await db.getAuditLogs();
+          
+          if (actionFilter) logs = logs.filter(l => l.action === actionFilter);
+          if (actorFilter) logs = logs.filter(l => l.actor === actorFilter);
+          
+          const total = logs.length;
+          const totalPages = Math.ceil(total / limit);
+          const startIdx = (page - 1) * limit;
+          const paginated = logs.slice(startIdx, startIdx + limit);
+          
+          return sendJson(res, 200, { success: true, data: paginated, pagination: { total, page, limit, totalPages } });
+        } catch(e) {
+          return sendJson(res, 500, { success: false, error: e.message });
+        }
+      }
+    }
+
+    if (reqPath === '/api/admin/dashboard') {
+      if (req.method === 'GET') {
+        if (!requireAdmin()) return;
+        
+        try {
+          const students = await db.getStudents();
+          const accounts = await db.getAccounts();
+          const sessions = await db.getSessions();
+          const attendance = await db.getAttendance();
+          
+          const today = new Date().toISOString().split('T')[0];
+          
+          // Filter today's sessions
+          const todaySessions = sessions.filter(s => s.date === today);
+          
+          // Compute today's unique students present
+          const todayLogs = attendance.filter(log => log.date === today);
+          const presentRolls = new Set(todayLogs.map(log => log.rollNo.toUpperCase()));
+          const presentCount = presentRolls.size;
+          
+          const totalStudents = students.filter(s => s.status !== 'inactive').length;
+          const absentCount = Math.max(0, totalStudents - presentCount);
+          
+          // Enrich sessions with present/total counts
+          const enrichedSessions = todaySessions.map(session => {
+             const sessionLogs = todayLogs.filter(log => log.session === session.sessionId);
+             const sessionPresentCount = new Set(sessionLogs.map(l => l.rollNo.toUpperCase())).size;
+             const sectionTotal = students.filter(s => s.status !== 'inactive' && s.section && s.section.toUpperCase() === session.section.toUpperCase()).length;
+             
+             return {
+                ...session,
+                presentCount: sessionPresentCount,
+                totalCount: sectionTotal
+             };
+          });
+          
+          // Sort by newest first
+          enrichedSessions.sort((a, b) => new Date(b.startTime) - new Date(a.startTime));
+          
+          return sendJson(res, 200, {
+             success: true,
+             totalStudents,
+             totalEmployees: accounts.length,
+             totalSessions: todaySessions.length,
+             presentCount,
+             absentCount,
+             sessionsToday: enrichedSessions
+          });
+          
+        } catch (err) {
+          return sendJson(res, 500, { success: false, error: err.message });
+        }
+      }
+    }
+
     // 3. ATTENDANCE LOGS API
+    
+    // --- ATTENDANCE HISTORY (PAGINATED & FILTERED) ---
+    if (reqPath === '/api/attendance/history') {
+      if (req.method === 'GET') {
+        const urlParams = new URL('http://localhost' + req.url).searchParams;
+        const page = parseInt(urlParams.get('page')) || 1;
+        const limit = parseInt(urlParams.get('limit')) || 50;
+        const startDate = urlParams.get('startDate');
+        const endDate = urlParams.get('endDate');
+        const branch = urlParams.get('branch');
+        const year = urlParams.get('year');
+        const section = urlParams.get('section');
+        const subject = urlParams.get('subject');
+        const employee = urlParams.get('employee');
+
+        try {
+           let logs = await db.getAttendance();
+           
+           // Apply Employee-level Security Filtering
+           if (!isAdmin) {
+             const roster = await db.getStudents();
+             const allowedRolls = new Set(
+               roster.filter(s => (s.assignedTo || 'all') === 'all' || s.assignedTo === user.username)
+                     .map(s => s.rollNo.toUpperCase())
+             );
+             logs = logs.filter(log => allowedRolls.has((log.rollNo || '').toUpperCase()));
+           }
+           
+           // Enrich with Session Data (for Subject & Employee filters)
+           const sessions = await db.getSessions();
+           const sessionMap = new Map();
+           sessions.forEach(s => sessionMap.set(s.sessionId, s));
+           
+           const enrichedLogs = logs.map(log => {
+              const sessionObj = sessionMap.get(log.session);
+              return {
+                 ...log,
+                 subject: sessionObj ? sessionObj.subject : (log.eventId || 'General'),
+                 sessionEmployee: sessionObj ? sessionObj.employee : log.markedBy
+              };
+           });
+           
+           // Apply Filters
+           let filtered = enrichedLogs;
+           
+           if (startDate) {
+              filtered = filtered.filter(l => l.date >= startDate);
+           }
+           if (endDate) {
+              filtered = filtered.filter(l => l.date <= endDate);
+           }
+           if (branch) {
+              filtered = filtered.filter(l => l.branch === branch);
+           }
+           if (year) {
+              filtered = filtered.filter(l => l.year === year);
+           }
+           if (section) {
+              filtered = filtered.filter(l => l.section && l.section.toUpperCase() === section.toUpperCase());
+           }
+           if (subject) {
+              filtered = filtered.filter(l => l.subject && l.subject.toLowerCase().includes(subject.toLowerCase()));
+           }
+           if (employee) {
+              filtered = filtered.filter(l => l.sessionEmployee === employee || l.markedBy === employee);
+           }
+           
+           // Sort by newest first (date desc, then timestamp desc)
+           filtered.sort((a, b) => {
+              if (a.date !== b.date) return a.date > b.date ? -1 : 1;
+              return a.timestamp > b.timestamp ? -1 : 1;
+           });
+           
+           const total = filtered.length;
+           const totalPages = Math.ceil(total / limit);
+           const startIdx = (page - 1) * limit;
+           const paginated = filtered.slice(startIdx, startIdx + limit);
+           
+           return sendJson(res, 200, {
+             success: true,
+             data: paginated,
+             pagination: {
+                total,
+                page,
+                limit,
+                totalPages
+             }
+           });
+        } catch (err) {
+           return sendJson(res, 500, { success: false, error: err.message });
+        }
+      }
+    }
+
     if (reqPath === '/api/attendance') {
       // Helper function to get allowed roll numbers for employee
       const getAllowedRolls = async () => {
@@ -486,7 +706,7 @@ const server = http.createServer(async (req, res) => {
         }
 
         const result = await db.deleteAttendanceRecord(recordId);
-        return sendJson(res, 200, { success: true, message: result.message, count: result.count });
+        if(reqPath==='/api/students') logAudit(user, 'student deactivated', recordId); return sendJson(res, 200, { success: true, message: result.message, count: result.count });
       }
     }
 
