@@ -762,8 +762,11 @@ const App = (() => {
     }
   }
 
-  function submitAddStudent(e) {
+    async function submitAddStudent(e) {
     if (e) e.preventDefault();
+    const btn = e ? e.submitter : null;
+    App.setBtnLoading(btn, true, 'Saving...');
+    
     const rollNo = document.getElementById('newStudentRoll')?.value;
     const name = document.getElementById('newStudentName')?.value;
     const branch = document.getElementById('newStudentBranch')?.value;
@@ -772,14 +775,27 @@ const App = (() => {
     const assignedTo = document.getElementById('newStudentAssignedTo')?.value || 'all';
 
     try {
-      RosterManager.addStudent({ rollNo, name, branch, year, section, assignedTo });
-      closeModal('modalAddStudent');
-      const assignLabel = assignedTo === 'all' ? 'All Employees' : assignedTo;
-      showToast(`Student ${rollNo} registered & assigned to ${assignLabel}!`, 'success');
-      document.getElementById('formAddStudent').reset();
-      refreshAllViews();
+      // Instead of relying purely on RosterManager local push, do the API call
+      const res = await fetch('/api/roster', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (localStorage.getItem('auth_token') || '') },
+        body: JSON.stringify([{ rollNo, name, branch, year, section, assignedTo }])
+      });
+      const data = await res.json();
+      App.setBtnLoading(btn, false);
+      
+      if (data.success) {
+        closeModal('modalAddStudent');
+        const assignLabel = assignedTo === 'all' ? 'All Employees' : assignedTo;
+        showToast(`Student ${rollNo} registered & assigned to ${assignLabel}!`, 'success');
+        document.getElementById('formAddStudent').reset();
+        fetchAndRenderRoster(1);
+      } else {
+        showToast(data.error || 'Failed to add student', 'error');
+      }
     } catch (err) {
-      showToast(err.message, 'error');
+      App.setBtnLoading(btn, false);
+      showToast(err.message || 'Network Error', 'error');
     }
   }
 
@@ -862,8 +878,11 @@ const App = (() => {
     openModal('modalEditStudent');
   }
 
-  function submitEditStudent(e) {
+    async function submitEditStudent(e) {
     if (e) e.preventDefault();
+    const btn = e ? e.submitter : null;
+    App.setBtnLoading(btn, true, 'Saving...');
+    
     const rollNo = document.getElementById('editStudentRoll')?.value;
     const name = document.getElementById('editStudentName')?.value;
     const branch = document.getElementById('editStudentBranch')?.value;
@@ -872,12 +891,24 @@ const App = (() => {
     const assignedTo = document.getElementById('editStudentAssignedTo')?.value || 'all';
 
     try {
-      RosterManager.updateStudent(rollNo, { name, branch, year, section, assignedTo });
-      closeModal('modalEditStudent');
-      showToast(`Student ${rollNo} updated successfully!`, 'success');
-      refreshAllViews();
+      const res = await fetch('/api/roster/student', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (localStorage.getItem('auth_token') || '') },
+        body: JSON.stringify({ rollNo, action: 'edit', updates: { name, branch, year, section, assignedTo } })
+      });
+      const data = await res.json();
+      App.setBtnLoading(btn, false);
+      
+      if (data.success) {
+        closeModal('modalEditStudent');
+        showToast(`Student ${rollNo} updated!`, 'success');
+        fetchAndRenderRoster(rosterCurrentPage);
+      } else {
+        showToast(data.error || 'Failed to update student', 'error');
+      }
     } catch (err) {
-      showToast(err.message, 'error');
+      App.setBtnLoading(btn, false);
+      showToast(err.message || 'Network Error', 'error');
     }
   }
 
@@ -1246,6 +1277,23 @@ const App = (() => {
 
   function bindSimulator() {
     // Quick simulator chip listeners handled inline or via delegate
+  }
+
+  // --- UI Loader State Manager ---
+  function setBtnLoading(btnElement, isLoading, loadingText = 'Loading...') {
+     if (!btnElement) return;
+     if (isLoading) {
+        if(btnElement.disabled && !btnElement.dataset.originalText) return; // already loading
+        btnElement.disabled = true;
+        btnElement.dataset.originalText = btnElement.innerHTML;
+        btnElement.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> ${loadingText}`;
+     } else {
+        btnElement.disabled = false;
+        if (btnElement.dataset.originalText) {
+            btnElement.innerHTML = btnElement.dataset.originalText;
+            delete btnElement.dataset.originalText;
+        }
+     }
   }
 
   function showToast(message, type = 'info') {
@@ -1782,6 +1830,7 @@ const App = (() => {
     exportPresentStudentsPDF,
     submitExportPresentModal,
     showToast,
+    setBtnLoading,
     refreshAllViews,
     handleLogout,
     submitAddAccount,
