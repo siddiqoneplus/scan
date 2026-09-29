@@ -267,6 +267,69 @@ const server = http.createServer(async (req, res) => {
       }
     }
 
+
+    // --- SESSIONS API ---
+    if (reqPath === '/api/sessions') {
+      if (req.method === 'GET') {
+        const sessions = await db.getSessions();
+        return sendJson(res, 200, { success: true, sessions });
+      }
+    }
+    
+    if (reqPath === '/api/sessions/start') {
+      if (req.method === 'POST') {
+        if (!user) return sendJson(res, 401, { success: false, error: 'Unauthorized' });
+        const body = await parseBody(req);
+        
+        if (!body.subject || !body.section || !body.period) {
+           return sendJson(res, 400, { success: false, error: 'Missing required session fields' });
+        }
+        
+        const session = {
+           sessionId: 'session-' + Date.now(),
+           date: new Date().toISOString().split('T')[0],
+           period: body.period,
+           subject: body.subject,
+           employee: user.username,
+           branch: body.branch || '',
+           year: body.year || '',
+           section: body.section,
+           startTime: new Date().toISOString(),
+           status: 'active'
+        };
+        
+        await db.saveSession(session);
+        return sendJson(res, 200, { success: true, session });
+      }
+    }
+    
+    if (reqPath === '/api/sessions/stop') {
+      if (req.method === 'POST') {
+        if (!user) return sendJson(res, 401, { success: false, error: 'Unauthorized' });
+        const body = await parseBody(req);
+        
+        if (!body.sessionId) {
+           return sendJson(res, 400, { success: false, error: 'Missing sessionId' });
+        }
+        
+        const sessions = await db.getSessions();
+        const session = sessions.find(s => s.sessionId === body.sessionId);
+        if (!session) {
+           return sendJson(res, 404, { success: false, error: 'Session not found' });
+        }
+        
+        if (!isAdmin && session.employee !== user.username) {
+           return sendJson(res, 403, { success: false, error: 'Cannot stop another employee\'s session' });
+        }
+        
+        session.endTime = new Date().toISOString();
+        session.status = 'completed';
+        
+        await db.saveSession(session);
+        return sendJson(res, 200, { success: true, session });
+      }
+    }
+
     // 3. ATTENDANCE LOGS API
     if (reqPath === '/api/attendance') {
       // Helper function to get allowed roll numbers for employee
@@ -302,12 +365,28 @@ const server = http.createServer(async (req, res) => {
         const today = new Date().toISOString().split('T')[0];
         const nowTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
         const existingLogs = await db.getAttendance();
+        const allSessions = await db.getSessions();
 
         // Helper to process a single record securely
         const processRecord = (reqRecord) => {
           if (!reqRecord.rollNo || !reqRecord.session) {
              throw new Error('Missing rollNo or session');
           }
+          
+          const sessionObj = allSessions.find(s => s.sessionId === reqRecord.session);
+          
+          if (!sessionObj) {
+            // For backward compatibility, allow non-session strings (like event IDs or raw period strings)
+            // But if it looks like a session ID, we reject it if not found.
+            if (reqRecord.session.startsWith('session-')) {
+               throw new Error('Session not found');
+            }
+          } else {
+             if (sessionObj.status !== 'active') {
+                throw new Error('Attendance session has ended or is inactive');
+             }
+          }
+          
           const cleanRoll = reqRecord.rollNo.toUpperCase();
           const student = roster.find(s => s.rollNo.toUpperCase() === cleanRoll);
           if (!student) throw new Error(`Student ${cleanRoll} not found`);

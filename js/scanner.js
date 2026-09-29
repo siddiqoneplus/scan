@@ -198,6 +198,11 @@ const ScannerEngine = (() => {
 
       if (res.ok && data.success) {
         playSound('success');
+
+        if (typeof SessionManager !== 'undefined') {
+           SessionManager.recordScanned(studentName);
+        }
+
         showResultBanner({
           type: 'success',
           title: 'ATTENDANCE SECURELY CONFIRMED',
