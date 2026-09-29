@@ -608,62 +608,6 @@ const ScannerEngine = (() => {
     `;
 
     banner.style.display = 'block';
-  }) {
-    const banner = document.getElementById('scanResultBanner');
-    if (!banner) return;
-
-    banner.className = `result-banner ${type}`;
-    
-    let iconClass = 'fa-circle-check';
-    if (type === 'error') iconClass = 'fa-circle-xmark';
-    if (type === 'warning') iconClass = 'fa-triangle-exclamation';
-
-    let studentDetailsHtml = '';
-    if (student) {
-      studentDetailsHtml = `
-        <div class="student-card-preview">
-          <div class="student-avatar ${type}">
-            ${student.name.charAt(0)}
-          </div>
-          <div class="student-info">
-            <h4>${escapeHtml(student.name)}</h4>
-            <div class="roll-no">${escapeHtml(student.rollNo)}</div>
-            <div class="student-badges">
-              <span class="tag tag-branch">${escapeHtml(student.branch.split('(')[1]?.replace(')', '') || student.branch)}</span>
-              <span class="tag tag-year">${escapeHtml(student.year)}</span>
-              ${student.section ? `<span class="tag tag-section">Sec ${escapeHtml(student.section)}</span>` : ''}
-              ${record ? `<span class="tag tag-session"><i class="fa-solid fa-clock"></i> ${escapeHtml(record.timestamp)}</span>` : ''}
-            </div>
-          </div>
-        </div>
-      `;
-    } else {
-      studentDetailsHtml = `
-        <div class="student-card-preview">
-          <div class="student-avatar error">
-            <i class="fa-solid fa-user-slash"></i>
-          </div>
-          <div class="student-info">
-            <h4>Unregistered Student</h4>
-            <div class="roll-no">${escapeHtml(rollNo)}</div>
-            <div class="form-hint unregistered-hint">
-              Admin must import or assign this roll number in Google Form / Roster tab.
-            </div>
-          </div>
-        </div>
-      `;
-    }
-
-    banner.innerHTML = `
-      <div class="result-header">
-        <i class="fa-solid ${iconClass}"></i>
-        <span>${title}</span>
-      </div>
-      <p class="result-desc">${escapeHtml(message)}</p>
-      ${studentDetailsHtml}
-    `;
-
-    banner.style.display = 'block';
   }
 
   function updateStatus(text, state) {

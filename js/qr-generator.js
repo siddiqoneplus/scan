@@ -87,8 +87,6 @@ const QRStudio = (() => {
       const card = document.createElement('div');
       card.className = 'id-card';
       const qrBoxId = `qr-box-${index}-${student.rollNo.replace(/[^a-zA-Z0-9]/g, '')}`;
-
-      const qrBoxId = `qr-box-${index}-${student.rollNo.replace(/[^a-zA-Z0-9]/g, '')}`;
       card.innerHTML = generateCardHTML(student, 'studio', index);
 
       container.appendChild(card);
