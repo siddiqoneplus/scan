@@ -603,6 +603,9 @@ const App = (() => {
                     </button>`
                 }
               ` : ''}
+              <button class="btn btn-secondary btn-sm" onclick="App.openViewQR('${s.rollNo}')" title="View QR Card">
+                <i class="fa-solid fa-id-card"></i>
+              </button>
               <button class="btn btn-secondary btn-sm" onclick="App.simulateScan('${s.rollNo}')" title="Test QR Scan">
                 <i class="fa-solid fa-barcode"></i>
               </button>
@@ -773,6 +776,7 @@ const App = (() => {
   }
 
   function openModal(modalId) {
+    document.body.classList.add("modal-open");
     const modal = document.getElementById(modalId);
     if (modal) {
       modal.classList.add('active');
@@ -790,6 +794,7 @@ const App = (() => {
   }
 
   function closeModal(modalId) {
+    document.body.classList.remove("modal-open");
     const modal = document.getElementById(modalId);
     if (modal) {
       modal.classList.remove('active');
@@ -1828,6 +1833,7 @@ const App = (() => {
     init,
     switchTab,
     simulateScan,
+    openViewQR,
     handleManualSubmit,
     openModal,
     closeModal,

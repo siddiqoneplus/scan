@@ -96,18 +96,15 @@
 <body>
 
   <!-- COLD START OVERLAY -->
-  <div id="coldStartOverlay" style="position:fixed;top:0;left:0;width:100%;height:100%;background:#0f172a;z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#fff;">
-      <div style="font-size: 3.5rem; margin-bottom: 20px; color: #10b981;"><i class="fa-solid fa-server fa-fade"></i></div>
-      <h2 style="margin: 0; font-family: 'Inter', sans-serif;">Waking up Server...</h2>
-      <p style="color: #94a3b8; text-align:center; max-width: 400px; padding: 20px; font-family: 'Inter', sans-serif;">
+  <div id="coldStartOverlay" class="cold-start-overlay">
+      <div class="cold-start-icon"><i class="fa-solid fa-server fa-fade"></i></div>
+      <h2 class="cold-start-title">Waking up Server...</h2>
+      <p class="cold-start-text">
         Render spins down the free tier database after inactivity. Please wait up to 50 seconds for the application to boot up securely.
       </p>
-      <div style="width: 200px; height: 4px; background: #1e293b; border-radius: 4px; overflow: hidden;">
-         <div style="width: 50%; height: 100%; background: #10b981; animation: slide 1.5s infinite linear;"></div>
+      <div class="cold-start-progress">
+         <div class="cold-start-bar"></div>
       </div>
-      <style>
-         @keyframes slide { 0% { transform: translateX(-100%); } 100% { transform: translateX(200%); } }
-      </style>
   </div>
 
 
@@ -1595,24 +1592,22 @@
   </div>
 
 
-  <!-- MODAL: VIEW QR -->
+  <!-- MODAL: VIEW QR ID CARD -->
   <div class="modal-backdrop" id="modalViewQR">
-    <div class="modal-box extract-style-1" >
+    <div class="modal-box modal-qr-box">
       <div class="modal-header">
-        <h3><i class="fa-solid fa-qrcode modal-icon-emerald"></i> Student QR Code</h3>
+        <h3><i class="fa-solid fa-id-card-clip modal-icon-emerald"></i> QR ID Card</h3>
         <button type="button" class="btn btn-secondary btn-icon" onclick="App.closeModal('modalViewQR')">&times;</button>
       </div>
-      <div class="modal-body">
-        <h4 id="qrStudentName"  class="extract-style-2">Student Name</h4>
-        <p id="qrStudentRoll" class="font-mono text-subtle extract-style-3" >ROLL NO</p>
+      <div class="modal-body modal-qr-body">
         
-        <div id="qrCodeContainer"  class="extract-style-4">
-           <canvas id="qrCanvas"></canvas>
+        <div id="singleCardWrap" class="modal-qr-wrap">
+           <!-- ID Card renders here -->
         </div>
         
-        <div class="flex-gap extract-style-5" >
-           <button class="btn btn-secondary" onclick="App.downloadQR()"><i class="fa-solid fa-download"></i> Download</button>
-           <button class="btn btn-primary" onclick="App.printQR()"><i class="fa-solid fa-print"></i> Print</button>
+        <div class="flex-gap w-full modal-qr-actions">
+           <button class="btn btn-secondary" id="btnDownloadSingleQR"><i class="fa-solid fa-download"></i> Download Image</button>
+           <button class="btn btn-primary" onclick="window.print()"><i class="fa-solid fa-print"></i> Print Card</button>
         </div>
       </div>
     </div>

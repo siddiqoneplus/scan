@@ -21,6 +21,42 @@ const QRStudio = (() => {
     }
   }
 
+
+  function generateCardHTML(student, mode = 'studio', customIndex = 0) {
+    const qrBoxId = mode === 'single' ? `qr-box-single-${student.rollNo.replace(/[^a-zA-Z0-9]/g, '')}` : `qr-box-${customIndex}-${student.rollNo.replace(/[^a-zA-Z0-9]/g, '')}`;
+    
+    const actionsHtml = mode === 'studio' ? `
+        <div class="id-card-actions">
+          <button class="btn btn-secondary btn-sm" onclick="QRStudio.downloadQR('${student.rollNo}', '${escapeHtml(student.name)}')">
+            <i class="fa-solid fa-download"></i> Save QR
+          </button>
+          <button class="btn btn-primary btn-sm" onclick="App.openViewQR('${student.rollNo}')">
+            <i class="fa-solid fa-id-card"></i> View Card
+          </button>
+        </div>` : '';
+
+    return `
+      <div class="id-card" style="${mode === 'single' ? 'margin: 0; box-shadow: none;' : ''}">
+        <div class="id-card-college">
+          <i class="fa-solid fa-building-columns"></i> Smart Attendance System
+        </div>
+        <div class="id-card-qr-box" id="${qrBoxId}"></div>
+        <div class="id-card-name">${escapeHtml(student.name)}</div>
+        <div class="id-card-roll">${escapeHtml(student.rollNo)}</div>
+        <div class="id-card-badges">
+          <span class="tag tag-branch">${escapeHtml(student.branch)}</span>
+          <span class="tag tag-year">${escapeHtml(student.year)}</span>
+          <span class="tag tag-section">${escapeHtml(student.section || '—')}</span>
+        </div>
+        ${actionsHtml}
+      </div>
+    `;
+  }
+  
+  function getSecurePayload(rollNo) {
+     return secureTokens[rollNo] || rollNo;
+  }
+
   async function renderStudentBadges() {
     await fetchSecureTokens();
     const container = document.getElementById('cardsContainer');
@@ -52,26 +88,8 @@ const QRStudio = (() => {
       card.className = 'id-card';
       const qrBoxId = `qr-box-${index}-${student.rollNo.replace(/[^a-zA-Z0-9]/g, '')}`;
 
-      card.innerHTML = `
-        <div class="id-card-college">
-          <i class="fa-solid fa-graduation-cap"></i> University Student ID
-        </div>
-        <div class="id-card-qr-box" id="${qrBoxId}"></div>
-        <div class="id-card-name">${escapeHtml(student.name)}</div>
-        <div class="id-card-roll">${escapeHtml(student.rollNo)}</div>
-        <div class="id-card-badges">
-          <span class="tag tag-branch">${escapeHtml(student.branch.split('(')[1]?.replace(')', '') || student.branch)}</span>
-          <span class="tag tag-year">${escapeHtml(student.year)}</span>
-        </div>
-        <div class="id-card-actions">
-          <button class="btn btn-secondary btn-sm" onclick="QRStudio.downloadQR('${student.rollNo}', '${escapeHtml(student.name)}')">
-            <i class="fa-solid fa-download"></i> Save QR
-          </button>
-          <button class="btn btn-primary btn-sm" onclick="App.simulateScan('${student.rollNo}')">
-            <i class="fa-solid fa-barcode"></i> Test Scan
-          </button>
-        </div>
-      `;
+      const qrBoxId = `qr-box-${index}-${student.rollNo.replace(/[^a-zA-Z0-9]/g, '')}`;
+      card.innerHTML = generateCardHTML(student, 'studio', index);
 
       container.appendChild(card);
 
@@ -216,6 +234,8 @@ const QRStudio = (() => {
     generateQRCode,
     downloadQR,
     setFilters,
-    printAllBadges
+    printAllBadges,
+    generateCardHTML,
+    getSecurePayload
   };
 })();
