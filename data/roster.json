@@ -1,1 +1,26 @@
-[]
+[
+  {
+    "rollNo": "A1",
+    "name": "Alice",
+    "branch": "",
+    "year": "",
+    "section": "",
+    "assignedTo": "employee"
+  },
+  {
+    "rollNo": "A2",
+    "name": "Bob",
+    "branch": "",
+    "year": "",
+    "section": "",
+    "assignedTo": "admin"
+  },
+  {
+    "rollNo": "A3",
+    "name": "Charlie",
+    "branch": "",
+    "year": "",
+    "section": "",
+    "assignedTo": "all"
+  }
+]

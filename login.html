@@ -159,7 +159,7 @@
       hideError();
     }
 
-    function handleLogin(e) {
+    async function handleLogin(e) {
       e.preventDefault();
 
       const username = document.getElementById('loginUsername').value.trim();
@@ -179,33 +179,30 @@
       btnIcon.style.display = 'none';
       btnText.textContent = 'Signing in...';
 
-      // Simulate brief auth delay for UX polish
-      setTimeout(() => {
-        const result = AuthManager.login(username, password, rememberMe);
+      const result = await AuthManager.login(username, password, rememberMe);
 
-        if (result.success) {
-          // Verify role matches selection
-          if (result.session.role !== selectedRole) {
-            AuthManager.logout();
-            spinner.classList.remove('visible');
-            btnIcon.style.display = '';
-            btnText.textContent = selectedRole === 'admin' ? 'Sign In as Admin' : 'Sign In as Employee';
-            showError(`This account is not an ${selectedRole}. Please select the correct role.`);
-            return;
-          }
-
-          // Success — redirect
-          btnText.textContent = 'Welcome!';
-          setTimeout(() => {
-            window.location.href = 'index.html';
-          }, 400);
-        } else {
+      if (result.success) {
+        // Verify role matches selection
+        if (result.session.role !== selectedRole) {
+          AuthManager.logout();
           spinner.classList.remove('visible');
           btnIcon.style.display = '';
           btnText.textContent = selectedRole === 'admin' ? 'Sign In as Admin' : 'Sign In as Employee';
-          showError(result.error);
+          showError(`This account is not an ${selectedRole}. Please select the correct role.`);
+          return;
         }
-      }, 600);
+
+        // Success — redirect
+        btnText.textContent = 'Welcome!';
+        setTimeout(() => {
+          window.location.href = 'index.html';
+        }, 400);
+      } else {
+        spinner.classList.remove('visible');
+        btnIcon.style.display = '';
+        btnText.textContent = selectedRole === 'admin' ? 'Sign In as Admin' : 'Sign In as Employee';
+        showError(result.error);
+      }
     }
 
     function showError(message) {

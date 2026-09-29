@@ -5,6 +5,29 @@
  * Synchronizes with backend REST API for centralized multi-device account management.
  */
 
+// Intercept fetch to add Authorization header automatically
+const originalFetch = window.fetch;
+window.fetch = async function(url, options = {}) {
+  if (typeof url === 'string' && url.startsWith('/api/') && url !== '/api/login') {
+    let session = null;
+    try {
+      session = JSON.parse(localStorage.getItem('smart_attendance_session'));
+    } catch(e) {}
+    if (session && session.token) {
+      options.headers = options.headers || {};
+      options.headers['Authorization'] = `Bearer ${session.token}`;
+    }
+  }
+  const response = await originalFetch(url, options);
+  if (response.status === 401 && url !== '/api/login') {
+     localStorage.removeItem('smart_attendance_session');
+     if (!window.location.href.includes('login.html')) {
+       window.location.href = 'login.html';
+     }
+  }
+  return response;
+};
+
 const AuthManager = (() => {
   const SESSION_KEY = 'smart_attendance_session';
   const ACCOUNTS_KEY = 'smart_attendance_accounts';
@@ -36,6 +59,7 @@ const AuthManager = (() => {
   }
 
   async function syncFromServer() {
+    if (!isAdmin()) return; // Only admin needs full account list for UI mapping
     try {
       const response = await fetch('/api/accounts');
       if (response.ok) {
@@ -70,31 +94,35 @@ const AuthManager = (() => {
   }
 
   /**
-   * Attempt login with username/password.
+   * Attempt login with username/password via backend API.
    * Returns { success, session?, error? }
    */
-  function login(username, password, rememberMe = false) {
-    const accounts = getAccounts();
-    const normalizedUser = username.trim().toLowerCase();
-
-    const account = accounts.find(
-      a => a.username.toLowerCase() === normalizedUser && a.password === password
-    );
-
-    if (!account) {
-      return { success: false, error: 'Invalid username or password.' };
+  async function login(username, password, rememberMe = false) {
+    try {
+      const response = await fetch('/api/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password })
+      });
+      const data = await response.json();
+      
+      if (data.success) {
+        const session = {
+          username: data.session.username,
+          displayName: data.session.displayName,
+          role: data.session.role,
+          token: data.token,
+          loginTime: new Date().toISOString(),
+          rememberMe: rememberMe
+        };
+        localStorage.setItem(SESSION_KEY, JSON.stringify(session));
+        return { success: true, session };
+      } else {
+        return { success: false, error: data.error || 'Login failed' };
+      }
+    } catch (e) {
+      return { success: false, error: 'Network error or server unreachable.' };
     }
-
-    const session = {
-      username: account.username,
-      displayName: account.displayName,
-      role: account.role,
-      loginTime: new Date().toISOString(),
-      rememberMe: rememberMe
-    };
-
-    localStorage.setItem(SESSION_KEY, JSON.stringify(session));
-    return { success: true, session };
   }
 
   /**

@@ -63,9 +63,65 @@ const server = http.createServer(async (req, res) => {
   // -------------------------------------------------------------
   if (reqPath.startsWith('/api/')) {
 
+    // --- AUTHENTICATION ---
+    if (reqPath === '/api/login' && req.method === 'POST') {
+      const body = await parseBody(req);
+      const accounts = await db.getAccounts();
+      const account = accounts.find(a => a.username.toLowerCase() === (body.username || '').trim().toLowerCase() && a.password === body.password);
+      
+      if (!account) {
+        return sendJson(res, 401, { success: false, error: 'Invalid username or password' });
+      }
+
+      const jwt = require('jsonwebtoken');
+      const JWT_SECRET = process.env.JWT_SECRET || 'fallback-secret-for-dev';
+      const token = jwt.sign({
+        username: account.username,
+        role: account.role,
+        displayName: account.displayName
+      }, JWT_SECRET, { expiresIn: '12h' });
+
+      return sendJson(res, 200, {
+        success: true,
+        token,
+        session: {
+          username: account.username,
+          role: account.role,
+          displayName: account.displayName
+        }
+      });
+    }
+
+    // --- AUTHENTICATION MIDDLEWARE ---
+    let user = null;
+    const authHeader = req.headers.authorization;
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      const token = authHeader.substring(7);
+      const jwt = require('jsonwebtoken');
+      const JWT_SECRET = process.env.JWT_SECRET || 'fallback-secret-for-dev';
+      try {
+        user = jwt.verify(token, JWT_SECRET);
+      } catch (err) {
+        return sendJson(res, 401, { success: false, error: 'Expired, tampered, or invalid token' });
+      }
+    } else {
+      return sendJson(res, 401, { success: false, error: 'Authentication required' });
+    }
+
+    // --- AUTHORIZATION HELPERS ---
+    const isAdmin = user.role === 'admin';
+    const requireAdmin = () => {
+      if (!isAdmin) {
+        sendJson(res, 403, { success: false, error: 'Access denied: Admin role required' });
+        return false;
+      }
+      return true;
+    };
+
     // 0. DATABASE STATUS & CONFIGURATION API
     if (reqPath === '/api/db/status') {
       if (req.method === 'GET') {
+        if (!requireAdmin()) return;
         const status = await db.getStatus();
         return sendJson(res, 200, { success: true, db: status });
       }
@@ -73,6 +129,7 @@ const server = http.createServer(async (req, res) => {
 
     if (reqPath === '/api/db/test') {
       if (req.method === 'POST') {
+        if (!requireAdmin()) return;
         const body = await parseBody(req);
         const result = await db.testConnection(body.uri);
         return sendJson(res, 200, result);
@@ -81,6 +138,7 @@ const server = http.createServer(async (req, res) => {
 
     if (reqPath === '/api/db/configure') {
       if (req.method === 'POST') {
+        if (!requireAdmin()) return;
         const body = await parseBody(req);
         if (!body.uri) {
           return sendJson(res, 400, { success: false, error: 'MongoDB URI is required' });
@@ -95,14 +153,21 @@ const server = http.createServer(async (req, res) => {
     if (reqPath === '/api/roster') {
       if (req.method === 'GET') {
         const roster = await db.getStudents();
-        const enriched = roster.map(s => ({
+        let enriched = roster.map(s => ({
           ...s,
           assignedTo: s.assignedTo || 'all'
         }));
+        
+        // Employee API Data Filtering
+        if (!isAdmin) {
+          enriched = enriched.filter(s => s.assignedTo === 'all' || s.assignedTo === user.username);
+        }
+        
         return sendJson(res, 200, { success: true, students: enriched });
       }
 
       if (req.method === 'POST') {
+        if (!requireAdmin()) return;
         const body = await parseBody(req);
         const studentsList = Array.isArray(body) ? body : (body.students || []);
         const normalized = studentsList.map(s => ({
@@ -115,6 +180,7 @@ const server = http.createServer(async (req, res) => {
 
       // DELETE: Clear ALL students from DB + local JSON
       if (req.method === 'DELETE') {
+        if (!requireAdmin()) return;
         await db.saveStudents([]);
         return sendJson(res, 200, { success: true, message: 'All students cleared', count: 0 });
       }
@@ -122,6 +188,7 @@ const server = http.createServer(async (req, res) => {
 
     // 1b. DELETE INDIVIDUAL STUDENT
     if (reqPath === '/api/roster/student' && req.method === 'DELETE') {
+      if (!requireAdmin()) return;
       const body = await parseBody(req);
       const rollNo = body.rollNo || params.get('rollNo');
       if (!rollNo) {
@@ -136,6 +203,7 @@ const server = http.createServer(async (req, res) => {
     // 2. ROSTER IMPORT API
     if (reqPath === '/api/roster/import') {
       if (req.method === 'POST') {
+        if (!requireAdmin()) return;
         const body = await parseBody(req);
         const incoming = Array.isArray(body) ? body : (body.students || []);
         const assignedTo = body.assignedTo || 'all';
@@ -152,33 +220,78 @@ const server = http.createServer(async (req, res) => {
 
     // 3. ATTENDANCE LOGS API
     if (reqPath === '/api/attendance') {
+      // Helper function to get allowed roll numbers for employee
+      const getAllowedRolls = async () => {
+        if (isAdmin) return null;
+        const roster = await db.getStudents();
+        return new Set(
+          roster.filter(s => (s.assignedTo || 'all') === 'all' || s.assignedTo === user.username)
+                .map(s => s.rollNo.toUpperCase())
+        );
+      };
+
       if (req.method === 'GET') {
-        const logs = await db.getAttendance();
+        let logs = await db.getAttendance();
+        const allowedRolls = await getAllowedRolls();
+        
+        if (allowedRolls !== null) {
+          logs = logs.filter(log => allowedRolls.has((log.rollNo || '').toUpperCase()));
+        }
+        
         return sendJson(res, 200, { success: true, logs });
       }
 
       if (req.method === 'POST') {
         const body = await parseBody(req);
+        const allowedRolls = await getAllowedRolls();
 
-        // 1. If an individual scanned record is supplied, persist it immediately
+        // 1. If an individual scanned record is supplied
         if (body.record) {
+          if (allowedRolls !== null && !allowedRolls.has((body.record.rollNo || '').toUpperCase())) {
+            return sendJson(res, 403, { success: false, error: 'Access denied: unauthorized student roll no' });
+          }
           await db.addAttendanceRecord(body.record);
         } else if (body.rollNo && !body.logs) {
+          if (allowedRolls !== null && !allowedRolls.has((body.rollNo || '').toUpperCase())) {
+            return sendJson(res, 403, { success: false, error: 'Access denied: unauthorized student roll no' });
+          }
           await db.addAttendanceRecord(body);
         }
 
-        // 2. If bulk/sync logs are supplied, upsert them
+        // 2. If bulk/sync logs are supplied
         if (body.logs && Array.isArray(body.logs) && body.logs.length > 0) {
+          if (allowedRolls !== null) {
+            const unauthorized = body.logs.some(log => !allowedRolls.has((log.rollNo || '').toUpperCase()));
+            if (unauthorized) {
+              return sendJson(res, 403, { success: false, error: 'Access denied: batch contains unauthorized student roll no' });
+            }
+          }
           await db.saveAttendance(body.logs);
         }
 
         const logs = await db.getAttendance();
-        return sendJson(res, 200, { success: true, count: logs.length, logs });
+        // Return only allowed logs for consistency
+        const filteredLogs = allowedRolls !== null ? logs.filter(log => allowedRolls.has((log.rollNo || '').toUpperCase())) : logs;
+        return sendJson(res, 200, { success: true, count: filteredLogs.length, logs: filteredLogs });
       }
 
       if (req.method === 'DELETE') {
         const body = await parseBody(req);
         const recordId = body.id || params.get('id') || 'all';
+
+        if (recordId === 'all') {
+          if (!requireAdmin()) return;
+        } else {
+          // Employee can delete individual record, but must own the student
+          const allowedRolls = await getAllowedRolls();
+          if (allowedRolls !== null) {
+            const logs = await db.getAttendance();
+            const record = logs.find(r => r.id === recordId);
+            if (!record || !allowedRolls.has((record.rollNo || '').toUpperCase())) {
+              return sendJson(res, 403, { success: false, error: 'Access denied: unauthorized student roll no' });
+            }
+          }
+        }
 
         const result = await db.deleteAttendanceRecord(recordId);
         return sendJson(res, 200, { success: true, message: result.message, count: result.count });
@@ -187,6 +300,7 @@ const server = http.createServer(async (req, res) => {
 
     // 3b. ATOMIC PURGE: Clear ALL students AND attendance permanently
     if (reqPath === '/api/admin/clear-all' && (req.method === 'POST' || req.method === 'DELETE')) {
+      if (!requireAdmin()) return;
       const result = await db.clearAllSystemData();
       return sendJson(res, 200, { success: true, message: 'All system data permanently erased', ...result });
     }
@@ -194,17 +308,30 @@ const server = http.createServer(async (req, res) => {
     // 4. ACCOUNTS API
     if (reqPath === '/api/accounts') {
       if (req.method === 'GET') {
+        if (!requireAdmin()) return;
         const accounts = await db.getAccounts();
-        return sendJson(res, 200, { success: true, accounts });
+        // Prevent exposing passwords in API responses (Rule 12)
+        const safeAccounts = accounts.map(({ password, ...safe }) => safe);
+        return sendJson(res, 200, { success: true, accounts: safeAccounts });
       }
 
       if (req.method === 'POST') {
+        if (!requireAdmin()) return;
         const body = await parseBody(req);
-        const accounts = Array.isArray(body) ? body : (body.accounts || []);
-        if (accounts.length > 0) {
-          await db.saveAccounts(accounts);
+        const incomingAccounts = Array.isArray(body) ? body : (body.accounts || []);
+        if (incomingAccounts.length > 0) {
+          // Merge existing passwords to prevent wiping them since GET strips passwords
+          const existingAccounts = await db.getAccounts();
+          const existingMap = new Map(existingAccounts.map(a => [a.username.toLowerCase(), a.password]));
+          
+          const mergedAccounts = incomingAccounts.map(acc => {
+             const existingPass = existingMap.get(acc.username.toLowerCase());
+             return { ...acc, password: acc.password || existingPass };
+          });
+          
+          await db.saveAccounts(mergedAccounts);
         }
-        return sendJson(res, 200, { success: true, count: accounts.length });
+        return sendJson(res, 200, { success: true, count: incomingAccounts.length });
       }
     }
 
@@ -216,6 +343,7 @@ const server = http.createServer(async (req, res) => {
       }
 
       if (req.method === 'POST') {
+        if (!requireAdmin()) return;
         const body = await parseBody(req);
         const rules = body.rules || body;
         await db.saveRules(rules);
@@ -231,6 +359,7 @@ const server = http.createServer(async (req, res) => {
       }
 
       if (req.method === 'POST') {
+        if (!requireAdmin()) return;
         const body = await parseBody(req);
         if (body.action === 'update' && body.eventId) {
           const updated = await db.updateEvent(body.eventId, body.updates || {});
@@ -241,6 +370,7 @@ const server = http.createServer(async (req, res) => {
       }
 
       if (req.method === 'DELETE') {
+        if (!requireAdmin()) return;
         const body = await parseBody(req);
         const eventId = body.eventId || params.get('eventId');
         if (!eventId) {
@@ -263,6 +393,7 @@ const server = http.createServer(async (req, res) => {
       }
 
       if (req.method === 'POST') {
+        if (!requireAdmin()) return;
         const body = await parseBody(req);
         if (!body.eventId || !body.rollNumbers) {
           return sendJson(res, 400, { success: false, error: 'eventId and rollNumbers[] are required' });
@@ -272,6 +403,7 @@ const server = http.createServer(async (req, res) => {
       }
 
       if (req.method === 'DELETE') {
+        if (!requireAdmin()) return;
         const body = await parseBody(req);
         if (!body.eventId || !body.rollNo) {
           return sendJson(res, 400, { success: false, error: 'eventId and rollNo are required' });
