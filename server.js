@@ -156,12 +156,14 @@ const server = http.createServer(async (req, res) => {
       }
 
       const jwt = require('jsonwebtoken');
-      const JWT_SECRET = process.env.JWT_SECRET || 'fallback-secret-for-dev';
+      const JWT_SECRET = process.env.JWT_SECRET;
+      if (!JWT_SECRET) throw new Error('JWT_SECRET missing');
+      
       const token = jwt.sign({
         username: account.username,
         role: account.role,
         displayName: account.displayName
-      }, JWT_SECRET, { expiresIn: '12h' });
+      }, JWT_SECRET, { expiresIn: '12h', algorithm: 'HS256' });
 
       return sendJson(res, 200, {
         success: true,
@@ -180,11 +182,36 @@ const server = http.createServer(async (req, res) => {
     if (authHeader && authHeader.startsWith('Bearer ')) {
       const token = authHeader.substring(7);
       const jwt = require('jsonwebtoken');
-      const JWT_SECRET = process.env.JWT_SECRET || 'fallback-secret-for-dev';
+      const JWT_SECRET = process.env.JWT_SECRET;
+      
+      if (!JWT_SECRET) {
+         console.error('FATAL: JWT_SECRET environment variable is missing.');
+         return sendJson(res, 500, { success: false, error: 'Server authentication configuration error.' });
+      }
+      
       try {
-        user = jwt.verify(token, JWT_SECRET);
+        const decoded = jwt.verify(token, JWT_SECRET, { algorithms: ['HS256'] });
+        
+        // Derive user state directly from the database to prevent privilege escalation
+        // (i.e. if an admin revoked an employee's access, the JWT shouldn't be blindly trusted)
+        const allAccounts = await db.getAccounts();
+        const currentDbAccount = allAccounts.find(a => a.username === decoded.username);
+        
+        if (!currentDbAccount) {
+            return sendJson(res, 401, { success: false, error: 'Account revoked or deleted.' });
+        }
+        
+        user = {
+            username: currentDbAccount.username,
+            role: currentDbAccount.role,
+            displayName: currentDbAccount.displayName
+        };
+        
       } catch (err) {
-        return sendJson(res, 401, { success: false, error: 'Expired, tampered, or invalid token' });
+        if (err.name === 'TokenExpiredError') {
+            return sendJson(res, 401, { success: false, error: 'Session expired. Please log in again.' });
+        }
+        return sendJson(res, 401, { success: false, error: 'Invalid or tampered token.' });
       }
     } else {
       return sendJson(res, 401, { success: false, error: 'Authentication required' });
@@ -428,7 +455,7 @@ const server = http.createServer(async (req, res) => {
         if (!requireAdmin()) return;
         const roster = await db.getStudents();
         const jwt = require('jsonwebtoken');
-        const JWT_SECRET = process.env.JWT_SECRET || 'fallback-secret-for-dev';
+        const JWT_SECRET = process.env.JWT_SECRET; if (!JWT_SECRET) throw new Error('JWT_SECRET missing');
         
         const tokens = {};
         roster.forEach(s => {
@@ -852,7 +879,7 @@ const server = http.createServer(async (req, res) => {
       if (!qrPayload) return sendJson(res, 400, { success: false, reason: 'invalid QR', error: 'Missing QR Payload' });
 
       const jwt = require('jsonwebtoken');
-      const JWT_SECRET = process.env.JWT_SECRET || 'fallback-secret-for-dev';
+      const JWT_SECRET = process.env.JWT_SECRET; if (!JWT_SECRET) throw new Error('JWT_SECRET missing');
       
       let decoded;
       try {
@@ -1110,7 +1137,8 @@ const server = http.createServer(async (req, res) => {
 
     res.writeHead(200, {
       'Content-Type': contentType,
-      'Cache-Control': 'no-cache'
+      'Cache-Control': 'no-cache',
+      'Content-Security-Policy': "default-src 'self'; script-src 'self' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self'"
     });
 
     const stream = fs.createReadStream(filePath);
