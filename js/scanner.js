@@ -83,6 +83,12 @@ const ScannerEngine = (() => {
       updateStatus('Scanner library loading...', 'warning');
       return;
     }
+    
+    // 1. Check HTTPS / Browser Support
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+       updateStatus('Camera API unavailable. Ensure you are using HTTPS and a modern browser.', 'error');
+       return;
+    }
 
     try {
       if (!html5QrCode) {
@@ -93,10 +99,18 @@ const ScannerEngine = (() => {
         return;
       }
 
-      updateStatus('Camera loading...', 'warning');
-      const cameras = await Html5Qrcode.getCameras();
+      updateStatus('Requesting camera permissions...', 'warning');
+      
+      let cameras;
+      try {
+         cameras = await Html5Qrcode.getCameras();
+      } catch (camErr) {
+         // Throw to main catch block to handle permission / device errors properly
+         throw camErr; 
+      }
+      
       if (!cameras || cameras.length === 0) {
-        updateStatus('No camera found on this device', 'error');
+        updateStatus('Camera unavailable: No camera devices found on this device.', 'error');
         return;
       }
 
@@ -125,12 +139,29 @@ const ScannerEngine = (() => {
 
     } catch (err) {
       console.warn('Camera start error:', err);
-      if (err.name === 'NotAllowedError' || (typeof err === 'string' && err.includes('permission'))) {
-        updateStatus('Camera permission denied. Please allow camera access.', 'error');
+      let errorMsg = 'Camera initialization failed.';
+      
+      const errStr = (err.message || err.name || err.toString()).toLowerCase();
+      
+      if (errStr.includes('notallowederror') || errStr.includes('permission denied') || errStr.includes('permission dismissed')) {
+        errorMsg = 'Camera permission is blocked. Allow camera access for this site in your browser settings and try again.';
+      } else if (errStr.includes('notreadableerror') || errStr.includes('trackstarterror') || errStr.includes('in use') || errStr.includes('allocated')) {
+        errorMsg = 'Camera already in use by another tab or application. Please close it and try again.';
+      } else if (errStr.includes('overconstrainederror')) {
+        errorMsg = 'No suitable camera found that meets the scanner requirements.';
+      } else if (errStr.includes('notfounderror')) {
+        errorMsg = 'No camera found on this device.';
+      } else if (errStr.includes('https') || errStr.includes('secure context')) {
+        errorMsg = 'Camera access requires a secure HTTPS connection.';
       } else {
-        updateStatus('Camera failed to start: ' + (err.message || err), 'error');
+        errorMsg = 'Camera failed to start: ' + (err.message || err);
       }
+      
+      updateStatus(errorMsg, 'error');
       isScanning = false;
+      
+      const btn = document.getElementById('btnToggleCamera');
+      if (btn) btn.innerHTML = '<i class="fa-solid fa-camera"></i> Try Again';
     }
   }
 
