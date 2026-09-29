@@ -1,29 +1,11 @@
 [
   {
-    "rollNo": "M1",
-    "name": "Manual 1",
-    "branch": "General",
-    "year": "2024 Batch (3rd Year)",
-    "section": "A",
-    "assignedTo": "employee",
-    "status": "active"
-  },
-  {
-    "rollNo": "M2",
-    "name": "Manual 2",
-    "branch": "General",
-    "year": "2024 Batch (3rd Year)",
-    "section": "B",
-    "assignedTo": "admin",
-    "status": "active"
-  },
-  {
-    "rollNo": "M3",
-    "name": "Manual 3",
+    "rollNo": "DUP1",
+    "name": "Duplicate 1",
     "branch": "General",
     "year": "2024 Batch (3rd Year)",
     "section": "",
-    "assignedTo": "employee",
-    "status": "inactive"
+    "assignedTo": "all",
+    "status": "active"
   }
 ]

@@ -1,17 +1,56 @@
 [
   {
-    "id": "att-1790675497163-psft1",
+    "id": "att-1790677464701-u2dl4",
+    "rollNo": "DUP1",
+    "name": "Duplicate 1",
     "branch": "General",
+    "year": "2024 Batch (3rd Year)",
+    "section": "",
+    "session": "Night",
     "date": "2026-09-29",
+    "timestamp": "03:54:24 PM",
     "eventId": null,
-    "markedBy": "Staff Member",
-    "name": "Manual 1",
-    "rollNo": "M1",
-    "section": "A",
-    "session": "Morning",
     "status": "Present",
-    "timestamp": "03:21:36 PM",
     "walkIn": false,
-    "year": "2024 Batch (3rd Year)"
+    "markedBy": "Administrator"
+  },
+  {
+    "id": "att-1790677463777-x3fx5",
+    "rollNo": "DUP1",
+    "name": "Duplicate 1",
+    "branch": "General",
+    "year": "2024 Batch (3rd Year)",
+    "section": "",
+    "session": "Evening",
+    "date": "2026-09-29",
+    "timestamp": "03:54:23 PM",
+    "eventId": null,
+    "markedBy": "Staff Member"
+  },
+  {
+    "id": "att-1790677463295-v13cl",
+    "rollNo": "DUP1",
+    "name": "Duplicate 1",
+    "branch": "General",
+    "year": "2024 Batch (3rd Year)",
+    "section": "",
+    "session": "Afternoon",
+    "date": "2026-09-29",
+    "timestamp": "03:54:23 PM",
+    "eventId": null,
+    "markedBy": "Staff Member"
+  },
+  {
+    "id": "att-1790677462643-rtljw",
+    "rollNo": "DUP1",
+    "name": "Duplicate 1",
+    "branch": "General",
+    "year": "2024 Batch (3rd Year)",
+    "section": "",
+    "session": "Morning",
+    "date": "2026-09-29",
+    "timestamp": "03:54:22 PM",
+    "eventId": null,
+    "markedBy": "Staff Member"
   }
 ]

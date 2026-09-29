@@ -288,7 +288,11 @@ const server = http.createServer(async (req, res) => {
               if (isDuplicate) return sendJson(res, 400, { success: false, error: 'Duplicate attendance' });
               
               await db.addAttendanceRecord(secureRecord);
+              return sendJson(res, 200, { success: true, message: 'Attendance recorded' });
            } catch (e) {
+              if (e.message === 'DUPLICATE_ATTENDANCE') {
+                return sendJson(res, 400, { success: false, reason: 'duplicate scan', error: 'Attendance already marked.' });
+              }
               return sendJson(res, 400, { success: false, error: e.message });
            }
         } 
@@ -303,6 +307,7 @@ const server = http.createServer(async (req, res) => {
               if (newValidLogs.length > 0) {
                  await db.saveAttendance([...existingLogs, ...newValidLogs]);
               }
+               return sendJson(res, 200, { success: true, message: 'Batch attendance processed' });
            } catch (e) {
               return sendJson(res, 400, { success: false, error: e.message });
            }
@@ -312,7 +317,11 @@ const server = http.createServer(async (req, res) => {
               const isDuplicate = existingLogs.find(r => r.rollNo === secureRecord.rollNo && r.date === today && r.session === secureRecord.session && r.eventId === secureRecord.eventId);
               if (isDuplicate) return sendJson(res, 400, { success: false, error: 'Duplicate attendance' });
               await db.addAttendanceRecord(secureRecord);
+               return sendJson(res, 200, { success: true, message: 'Attendance recorded' });
            } catch (e) {
+              if (e.message === 'DUPLICATE_ATTENDANCE') {
+                return sendJson(res, 400, { success: false, reason: 'duplicate scan', error: 'Attendance already marked.' });
+              }
               return sendJson(res, 400, { success: false, error: e.message });
            }
         } else {
@@ -431,8 +440,15 @@ const server = http.createServer(async (req, res) => {
         markedBy: user.displayName || user.username
       };
 
-      await db.addAttendanceRecord(record);
-      return sendJson(res, 200, { success: true, reason: 'successful scan', record, student });
+      try {
+        await db.addAttendanceRecord(record);
+        return sendJson(res, 200, { success: true, reason: 'successful scan', record, student });
+      } catch (e) {
+        if (e.message === 'DUPLICATE_ATTENDANCE') {
+          return sendJson(res, 200, { success: false, reason: 'duplicate scan', error: 'Attendance already marked.', student });
+        }
+        return sendJson(res, 500, { success: false, error: e.message });
+      }
     }
 
     // 3b. ATOMIC PURGE: Clear ALL students AND attendance permanently

@@ -134,8 +134,8 @@ async function createIndexes() {
 
     const attendanceCol = db.collection('attendance');
     await attendanceCol.createIndex({ id: 1 }, { unique: true });
-    await attendanceCol.createIndex({ rollNo: 1, date: 1, session: 1 });
-    await attendanceCol.createIndex({ eventId: 1 });
+    // Enforce strict database-level uniqueness to completely eliminate race conditions
+    await attendanceCol.createIndex({ rollNo: 1, date: 1, session: 1, eventId: 1 }, { unique: true });
 
     const accountsCol = db.collection('accounts');
     await accountsCol.createIndex({ username: 1 }, { unique: true });
@@ -352,31 +352,32 @@ async function addAttendanceRecord(record) {
     record.id = 'att-' + Date.now() + '-' + Math.random().toString(36).substr(2, 5);
   }
 
-  // Update local JSON with deduplication
-  let currentLogs = readJsonFile('attendance.json', []);
-  const existingIdx = currentLogs.findIndex(r => r.id === record.id || (r.rollNo === record.rollNo && r.date === record.date && r.session === record.session));
-  if (existingIdx >= 0) {
-    currentLogs[existingIdx] = { ...currentLogs[existingIdx], ...record };
-  } else {
-    currentLogs.unshift(record);
-  }
-  writeJsonFile('attendance.json', currentLogs);
-
-  // Atomically upsert into MongoDB Atlas
+  // If connected to Atlas, insert atomically first to catch duplicates
   if (isConnected && db) {
     try {
       const doc = { ...record };
       delete doc._id;
-      await db.collection('attendance').updateOne(
-        { id: record.id },
-        { $set: doc },
-        { upsert: true }
-      );
-      return true;
+      await db.collection('attendance').insertOne(doc);
     } catch (err) {
+      if (err.code === 11000) {
+         throw new Error('DUPLICATE_ATTENDANCE');
+      }
       console.warn('[MongoDB Atlas] Add attendance record error:', err.message);
     }
   }
+
+  // Update local JSON with deduplication only after MongoDB succeeds (or if offline)
+  let currentLogs = readJsonFile('attendance.json', []);
+  const isDuplicate = currentLogs.some(r => r.rollNo === record.rollNo && r.date === record.date && r.session === record.session && r.eventId === record.eventId);
+  if (isDuplicate) {
+    if (isConnected && db) {
+       // Already caught by E11000 if connected, but just in case
+       throw new Error('DUPLICATE_ATTENDANCE');
+    }
+    throw new Error('DUPLICATE_ATTENDANCE');
+  }
+  currentLogs.unshift(record);
+  writeJsonFile('attendance.json', currentLogs);
   return true;
 }
 
