@@ -648,12 +648,31 @@ const App = (() => {
     }
 
     try {
-      const result = await RosterManager.importGoogleFormCSV(csvContent, assignedTo);
+      const summary = await RosterManager.importGoogleFormCSV(csvContent, assignedTo);
       closeModal('modalGoogleForm');
-      const assignLabel = assignedTo === 'all' ? 'All Employees' : assignedTo;
-      showToast(`Imported ${result.importedCount} students & assigned to ${assignLabel}! (${result.skippedCount} skipped)`, 'success');
       document.getElementById('gformCsvInput').value = '';
       refreshAllViews();
+
+      let msg = `Import Complete:\nTotal Rows: ${summary.totalRows}\nSuccessfully Imported: ${summary.importedCount}\nDuplicates Skipped: ${summary.duplicates}\nInvalid Rows: ${summary.invalidRows}`;
+      
+      if (summary.errors && summary.errors.length > 0) {
+        msg += '\n\nThere were errors. Downloading error log...';
+        showToast(msg, 'warning');
+        
+        // Trigger download of error log
+        const errorBlob = new Blob([summary.errors.join('\n')], { type: 'text/plain' });
+        const url = URL.createObjectURL(errorBlob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `import_errors_${new Date().getTime()}.txt`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      } else {
+        showToast(msg, 'success');
+      }
+
     } catch (err) {
       showToast('Import Error: ' + err.message, 'error');
     }

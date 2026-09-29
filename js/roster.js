@@ -428,23 +428,33 @@ const RosterManager = (() => {
       };
 
       importedList.push(studentItem);
-
-      const existingIdx = students.findIndex(s => s.rollNo.toUpperCase() === rawRoll);
-      if (existingIdx !== -1) {
-        students[existingIdx] = {
-          ...students[existingIdx],
-          ...studentItem
-        };
-      } else {
-        students.push(studentItem);
-      }
-      importedCount++;
     }
 
-    // Save locally and sync to server API permanently
-    await saveStudents(true);
+    if (importedList.length === 0) {
+      throw new Error("No valid student data found in the CSV.");
+    }
 
-    return { importedCount, skippedCount, total: students.length, assignedTo: targetAssignment };
+    // Pass to backend for robust validation and database entry
+    const res = await fetch('/api/roster/import', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + (localStorage.getItem('auth_token') || '')
+      },
+      body: JSON.stringify({ students: importedList, assignedTo: targetAssignment })
+    });
+
+    const data = await res.json();
+    if (!data.success) {
+      throw new Error(data.error || 'Server rejected the import.');
+    }
+
+    // Refresh local cache with the newly updated students list
+    students = data.students;
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(students));
+    window.dispatchEvent(new CustomEvent('roster:updated', { detail: { count: students.length } }));
+
+    return data.summary;
   }
 
   async function resetToDefault() {

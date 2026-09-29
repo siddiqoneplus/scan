@@ -186,13 +186,23 @@ const server = http.createServer(async (req, res) => {
         const incoming = Array.isArray(body) ? body : (body.students || []);
         const assignedTo = body.assignedTo || 'all';
 
-        const result = await db.importStudents(incoming, assignedTo);
-        return sendJson(res, 200, {
-          success: true,
-          importedCount: result.importedCount,
-          total: result.total,
-          students: result.students
-        });
+        try {
+          const result = await db.importStudents(incoming, assignedTo);
+          return sendJson(res, 200, {
+            success: true,
+            summary: {
+              totalRows: result.total,
+              importedCount: result.importedCount,
+              duplicates: result.duplicates,
+              invalidRows: result.invalidRows,
+              skippedRows: result.skippedRows,
+              errors: result.errors
+            },
+            students: result.students
+          });
+        } catch (e) {
+          return sendJson(res, 500, { success: false, error: e.message });
+        }
       }
     }
 

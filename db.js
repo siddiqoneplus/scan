@@ -244,34 +244,99 @@ async function saveStudents(studentsList) {
 
 async function importStudents(incoming, assignedTo = 'all') {
   let currentRoster = await getStudents();
-  let importedCount = 0;
+  
+  let totalRows = incoming.length;
+  let successfullyImported = 0;
+  let duplicateCount = 0;
+  let invalidRowsCount = 0;
+  let skippedRowsCount = 0;
+  let errors = [];
 
-  incoming.forEach(student => {
-    if (!student.rollNo) return;
+  const validStudentsToImport = [];
+  const incomingRollsSeen = new Set();
+  const existingRolls = new Set(currentRoster.map(s => s.rollNo.toUpperCase()));
+
+  incoming.forEach((student, index) => {
+    // 1. Basic presence check
+    if (!student || !student.rollNo || typeof student.rollNo !== 'string') {
+      invalidRowsCount++;
+      errors.push(`Row ${index + 1}: Missing or invalid roll number.`);
+      return;
+    }
+
     const cleanRoll = student.rollNo.trim().toUpperCase();
-    const existingIdx = currentRoster.findIndex(s => s.rollNo.toUpperCase() === cleanRoll);
+
+    // 2. Validate roll number format (alphanumeric and dashes)
+    if (!/^[A-Z0-9-]+$/.test(cleanRoll)) {
+      invalidRowsCount++;
+      errors.push(`Row ${index + 1}: Invalid roll number format '${cleanRoll}'. Only alphanumeric characters and dashes allowed.`);
+      return;
+    }
+
+    // 3. Duplicate within uploaded file
+    if (incomingRollsSeen.has(cleanRoll)) {
+      duplicateCount++;
+      skippedRowsCount++;
+      errors.push(`Row ${index + 1}: Roll number '${cleanRoll}' is a duplicate within the upload file.`);
+      return;
+    }
+    incomingRollsSeen.add(cleanRoll);
+
+    // 4. Duplicate in MongoDB
+    if (existingRolls.has(cleanRoll)) {
+      duplicateCount++;
+      skippedRowsCount++;
+      errors.push(`Row ${index + 1}: Roll number '${cleanRoll}' already exists in the database.`);
+      return;
+    }
+
+    // 5. Trim and normalize fields
+    const name = typeof student.name === 'string' ? student.name.trim() : `Student ${cleanRoll}`;
+    const branch = typeof student.branch === 'string' ? student.branch.trim() : 'General';
+    const year = typeof student.year === 'string' ? student.year.trim() : '2024 Batch (3rd Year)';
+    const section = typeof student.section === 'string' ? student.section.trim() : '';
+    
+    // Basic length validation
+    if (name.length === 0 || branch.length === 0 || year.length === 0) {
+      invalidRowsCount++;
+      errors.push(`Row ${index + 1}: Name, Branch, or Year cannot be empty after trimming.`);
+      return;
+    }
 
     const studentRecord = {
       rollNo: cleanRoll,
-      name: student.name || `Student ${cleanRoll}`,
-      branch: student.branch || 'General',
-      year: student.year || '2024 Batch (3rd Year)',
-      section: student.section || '',
+      name,
+      branch,
+      year,
+      section,
       assignedTo: student.assignedTo || assignedTo,
       status: student.status || 'active',
       importedAt: new Date().toISOString()
     };
 
-    if (existingIdx !== -1) {
-      currentRoster[existingIdx] = { ...currentRoster[existingIdx], ...studentRecord };
-    } else {
-      currentRoster.push(studentRecord);
-    }
-    importedCount++;
+    validStudentsToImport.push(studentRecord);
   });
 
-  await saveStudents(currentRoster);
-  return { importedCount, total: currentRoster.length, students: currentRoster };
+  // Batch insert valid students
+  if (validStudentsToImport.length > 0) {
+    // We add them to currentRoster and then use saveStudents, which handles MongoDB upserts and JSON files
+    currentRoster = [...currentRoster, ...validStudentsToImport];
+    const success = await saveStudents(currentRoster);
+    if (!success) {
+       throw new Error('Database write failed during bulk import. No records were saved.');
+    }
+    successfullyImported = validStudentsToImport.length;
+  }
+
+  return { 
+    total: totalRows,
+    importedCount: successfullyImported,
+    duplicates: duplicateCount,
+    invalidRows: invalidRowsCount,
+    skippedRows: skippedRowsCount,
+    errors,
+    students: currentRoster 
+  };
 }
 
 // --- ATTENDANCE ---
