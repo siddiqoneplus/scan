@@ -115,6 +115,9 @@ async function connect(uri = process.env.MONGODB_URI, dbName = process.env.DB_NA
 
     // Auto-migrate / seed initial data into Atlas if newly created
     await seedAtlasIfEmpty();
+    
+    // Migrate legacy plaintext passwords to bcrypt safely
+    await migratePasswords();
 
     return true;
   } catch (err) {
@@ -189,6 +192,30 @@ async function createIndexes() {
     console.log('[Storage Engine] Database Migration & Indexing Complete!');
   } catch (err) {
     console.warn('[MongoDB Atlas] Index creation error:', err.message);
+  }
+}
+
+async function migratePasswords() {
+  if (!isConnected || !db) return;
+  try {
+    const bcrypt = require('bcryptjs');
+    const accountsCol = db.collection('accounts');
+    const accounts = await accountsCol.find({}).toArray();
+    let migratedCount = 0;
+    
+    for (const acc of accounts) {
+       if (acc.password && !acc.password.startsWith('$2a$') && !acc.password.startsWith('$2b$')) {
+           const hashed = await bcrypt.hash(acc.password, 10);
+           await accountsCol.updateOne({ _id: acc._id }, { $set: { password: hashed } });
+           migratedCount++;
+       }
+    }
+    
+    if (migratedCount > 0) {
+       console.log(`[Storage Engine] Migrated ${migratedCount} legacy plaintext passwords to secure bcrypt hashes.`);
+    }
+  } catch (err) {
+    console.warn('[Storage Engine] Failed to migrate passwords:', err.message);
   }
 }
 

@@ -139,9 +139,19 @@ const server = http.createServer(async (req, res) => {
     if (reqPath === '/api/login' && req.method === 'POST') {
       const body = await parseBody(req);
       const accounts = await db.getAccounts();
-      const account = accounts.find(a => a.username.toLowerCase() === (body.username || '').trim().toLowerCase() && a.password === body.password);
+                  const bcrypt = require('bcryptjs');
+      const account = accounts.find(a => a.username.toLowerCase() === (body.username || '').trim().toLowerCase());
+      let isValid = false;
       
-      if (!account) {
+      if (account) {
+         if (account.password && (account.password.startsWith('$2a$') || account.password.startsWith('$2b$'))) {
+             isValid = await bcrypt.compare(body.password || '', account.password);
+         } else if (account.password) {
+             isValid = (account.password === body.password);
+         }
+      }
+      
+      if (!isValid) {
         return sendJson(res, 401, { success: false, error: 'Invalid username or password' });
       }
 
@@ -964,20 +974,34 @@ const server = http.createServer(async (req, res) => {
       if (req.method === 'POST') {
         if (!requireAdmin()) return;
         const body = await parseBody(req);
+        try { // accounts-post
         const incomingAccounts = Array.isArray(body) ? body : (body.accounts || []);
         if (incomingAccounts.length > 0) {
           // Merge existing passwords to prevent wiping them since GET strips passwords
           const existingAccounts = await db.getAccounts();
           const existingMap = new Map(existingAccounts.map(a => [a.username.toLowerCase(), a.password]));
           
-          const mergedAccounts = incomingAccounts.map(acc => {
+          const bcrypt = require('bcryptjs');
+          const mergedAccounts = await Promise.all(incomingAccounts.map(async acc => {
              const existingPass = existingMap.get(acc.username.toLowerCase());
-             return { ...acc, password: acc.password || existingPass };
-          });
+             
+             let finalPassword = existingPass;
+             if (acc.password && acc.password.trim() !== '') {
+                 if (acc.password.length < 6) {
+                    throw new Error('Password must be at least 6 characters long.');
+                 }
+                 finalPassword = await bcrypt.hash(acc.password, 10);
+             } else if (!existingPass) {
+                 throw new Error(`Password is required for new account: ${acc.username}`);
+             }
+             
+             return { ...acc, password: finalPassword };
+          }));
           
           await db.saveAccounts(mergedAccounts);
         }
         return sendJson(res, 200, { success: true, count: incomingAccounts.length });
+        } catch(e) { return handleApiError(res, e); }
       }
     }
 
