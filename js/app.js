@@ -1027,7 +1027,6 @@ const App = (() => {
     if (ed) ed.value = '';
     fetchAndRenderHistory(1);
   }
-  }
 
   function deleteStudent(rollNo) {
     if (confirm(`Are you sure you want to remove Roll Number ${rollNo} from the Admin whitelist?`)) {

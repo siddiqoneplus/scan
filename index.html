@@ -25,6 +25,65 @@
   <!-- jsPDF & AutoTable for Client-Side PDF Generation -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+  <style>
+    .admin-dashboard-card { margin-bottom: 20px; }
+    .dashboard-toolbar { border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 15px; margin-bottom: 15px; }
+    .dashboard-toolbar h3 { margin: 0; }
+    .dashboard-loader { display: flex; flex-direction: column; align-items: center; padding: 20px; }
+    .dashboard-error { display: none; color: #ff4757; text-align: center; padding: 20px; }
+    .dashboard-kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 15px; margin-bottom: 20px; }
+    .dashboard-kpi-card { background: rgba(255,255,255,0.05); padding: 15px; border-radius: 10px; text-align: center; border: 1px solid rgba(255,255,255,0.1); }
+    .dashboard-kpi-label { font-size: 0.75rem; color: #a4b0be; text-transform: uppercase; margin-bottom: 5px; }
+    .audit-modal-body { padding-top: 0; }
+    .audit-toolbar { margin-bottom: 15px; padding-bottom: 15px; border-bottom: 1px solid rgba(255,255,255,0.1); }
+    .audit-table-wrap { max-height: 400px; overflow-y: auto; }
+    .audit-thead { position: sticky; top: 0; background: var(--bg-card); z-index: 10; }
+    .pagination-footer { display: flex; justify-content: space-between; margin-top: 15px; color: #a4b0be; font-size: 0.9rem; }
+  </style>
+
+  <style>
+    .extract-style-1 { color: #a4b0be; font-size: 0.9rem; }
+    .extract-style-2 { padding: 0 10px; align-self: center; }
+    .extract-style-3 { display: none; text-align: center; padding: 40px; color: #a4b0be; }
+    .extract-style-4 { color: rgba(255,255,255,0.1); }
+    .extract-style-5 { color: var(--text-main); }
+    .extract-style-6 { display: flex; flex-direction: column; align-items: center; justify-content: center; background: rgba(0,0,0,0.8); z-index: 10; }
+    .extract-style-7 { font-size: 3rem; color: #ff4757; margin-bottom: 15px; }
+    .extract-style-8 { color: white; margin: 0; }
+    .extract-style-9 { color: #a4b0be; margin-top: 5px; }
+    .extract-style-10 { display:none; }
+    .extract-style-11 { border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 10px; margin-bottom: 15px; }
+    .extract-style-12 { display:none; }
+    .extract-style-13 { background: rgba(46, 213, 115, 0.1); border: 1px solid var(--accent-success); border-radius: 8px; padding: 15px; margin-bottom: 15px; }
+    .extract-style-14 { margin-top:0; color: var(--accent-success); font-size: 1.1rem; margin-bottom: 10px; }
+    .extract-style-15 { display: flex; justify-content: space-between; margin-bottom: 5px; }
+    .extract-style-16 { display: flex; justify-content: space-between; margin-bottom: 5px; }
+    .extract-style-17 { display: flex; justify-content: space-between; }
+    .extract-style-18 { color:var(--text-main); }
+    .extract-style-19 { display: none; }
+    .extract-style-20 { color: var(--cyan); }
+    .extract-style-21 { display: none; color: #ff4757; text-align: center; padding: 20px; }
+    .extract-style-22 { display: none; }
+    .extract-style-23 { font-size: 1.8rem; font-weight: bold; color: var(--cyan); }
+    .extract-style-24 { font-size: 1.8rem; font-weight: bold; color: var(--purple); }
+    .extract-style-25 { font-size: 1.8rem; font-weight: bold; color: var(--emerald); }
+    .extract-style-26 { font-size: 1.8rem; font-weight: bold; color: #2ed573; }
+    .extract-style-27 { font-size: 1.8rem; font-weight: bold; color: #ff4757; }
+    .extract-style-28 { margin-bottom: 10px; font-weight: 500; }
+    .extract-style-29 { display: none; text-align: center; padding: 20px; color: #a4b0be; background: rgba(255,255,255,0.02); border-radius: 8px; }
+    .extract-style-30 { font-size: 1.5rem; margin-bottom: 10px; }
+    .extract-style-31 { grid-column: 1 / -1; flex-wrap: wrap; }
+    .extract-style-32 { color:#a4b0be; align-self:center; }
+    .extract-style-33 { max-width: 900px; }
+    .extract-style-34 { display:flex; align-items:center; gap: 8px; }
+    .extract-style-35 { width: 20px; height: 20px; }
+    .extract-style-36 { margin: 0; font-weight: normal; }
+    .extract-style-37 { margin-bottom: 15px; font-size: 0.9rem; }
+    .extract-style-38 { opacity: 0.7; }
+    .extract-style-39 { opacity: 0.7; }
+    .extract-style-40 { max-width: 1000px; }
+    .extract-style-41 { text-align:center; }
+  </style>
 </head>
 <body>
 
@@ -181,20 +240,20 @@
         </div>
         
         <!-- Pagination Controls -->
-        <div id="analyticsPagination" style="display: flex; justify-content: space-between; align-items: center; padding: 15px 0; border-top: 1px solid rgba(255,255,255,0.1);">
-           <div style="color: #a4b0be; font-size: 0.9rem;">
+        <div id="analyticsPagination" class="pagination-footer">
+           <div  class="extract-style-1">
              Showing <span id="pageStart">0</span>-<span id="pageEnd">0</span> of <span id="pageTotal">0</span>
            </div>
            <div class="flex-gap-xs">
              <button class="btn btn-secondary btn-sm" id="btnPagePrev" onclick="App.changeAnalyticsPage(-1)"><i class="fa-solid fa-chevron-left"></i> Prev</button>
-             <span style="padding: 0 10px; align-self: center;" id="pageIndicator">Page 1 / 1</span>
+             <span  class="extract-style-2" id="pageIndicator">Page 1 / 1</span>
              <button class="btn btn-secondary btn-sm" id="btnPageNext" onclick="App.changeAnalyticsPage(1)">Next <i class="fa-solid fa-chevron-right"></i></button>
            </div>
         </div>
         
-        <div id="analyticsEmptyState" style="display: none; text-align: center; padding: 40px; color: #a4b0be;">
-           <i class="fa-solid fa-folder-open fa-3x mb-3" style="color: rgba(255,255,255,0.1);"></i>
-           <h3 style="color: var(--text-main);">No records found</h3>
+        <div id="analyticsEmptyState"  class="extract-style-3">
+           <i class="fa-solid fa-folder-open fa-3x mb-3 extract-style-4" ></i>
+           <h3  class="extract-style-5">No records found</h3>
            <p>Try adjusting your filters or date range.</p>
         </div>
 
@@ -230,13 +289,13 @@
             <div id="reader"></div>
 
             
-            <div class="scan-overlay" id="sessionInactiveOverlay" style="display: flex; flex-direction: column; align-items: center; justify-content: center; background: rgba(0,0,0,0.8); z-index: 10;">
-              <i class="fa-solid fa-lock" style="font-size: 3rem; color: #ff4757; margin-bottom: 15px;"></i>
-              <h3 style="color: white; margin: 0;">Scanner Locked</h3>
-              <p style="color: #a4b0be; margin-top: 5px;">Start an attendance session to unlock</p>
+            <div class="scan-overlay extract-style-6" id="sessionInactiveOverlay" >
+              <i class="fa-solid fa-lock extract-style-7" ></i>
+              <h3  class="extract-style-8">Scanner Locked</h3>
+              <p  class="extract-style-9">Start an attendance session to unlock</p>
             </div>
 
-            <div class="scan-overlay" id="scanFrameOverlay" style="display:none;">
+            <div class="scan-overlay extract-style-10" id="scanFrameOverlay" >
               <div class="scan-frame">
                 <span class="frame-corner-tr"></span>
                 <span class="frame-corner-bl"></span>
@@ -286,7 +345,7 @@
           
           <!-- Attendance Session Control Panel -->
           <div class="scanner-feed-card mb-3" id="sessionControlCard">
-            <div class="feed-header" style="border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 10px; margin-bottom: 15px;">
+            <div class="feed-header extract-style-11" >
               <h3 class="feed-title"><i class="fa-solid fa-clock"></i> Attendance Session</h3>
             </div>
             
@@ -308,20 +367,20 @@
                </button>
             </div>
             
-            <div id="sessionActive" style="display:none;">
-               <div style="background: rgba(46, 213, 115, 0.1); border: 1px solid var(--accent-success); border-radius: 8px; padding: 15px; margin-bottom: 15px;">
-                  <h4 id="activeSessionTitle" style="margin-top:0; color: var(--accent-success); font-size: 1.1rem; margin-bottom: 10px;">Subject (Sec) - Period</h4>
-                  <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+            <div id="sessionActive"  class="extract-style-12">
+               <div  class="extract-style-13">
+                  <h4 id="activeSessionTitle"  class="extract-style-14">Subject (Sec) - Period</h4>
+                  <div  class="extract-style-15">
                      <span class="text-muted">Present:</span>
                      <strong><span id="activeSessionPresent">0</span> / <span id="activeSessionTotal">0</span></strong>
                   </div>
-                  <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+                  <div  class="extract-style-16">
                      <span class="text-muted">Remaining:</span>
                      <strong id="activeSessionRemaining">0</strong>
                   </div>
-                  <div style="display: flex; justify-content: space-between;">
+                  <div  class="extract-style-17">
                      <span class="text-muted">Last Scanned:</span>
-                     <strong id="activeSessionLastScanned" style="color:var(--text-main);">None</strong>
+                     <strong id="activeSessionLastScanned"  class="extract-style-18">None</strong>
                   </div>
                </div>
                <button class="btn btn-danger w-100" onclick="SessionManager.stopSession()">
@@ -357,48 +416,48 @@
       
       
       <!-- Admin Dashboard -->
-      <div class="admin-card admin-only-el" id="adminDashboardCard" style="display: none; margin-bottom: 20px;">
-        <div class="section-toolbar" style="border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 15px; margin-bottom: 15px;">
-          <h3 style="margin: 0;"><i class="fa-solid fa-chart-line"></i> Admin Overview</h3>
+      <div class="admin-card admin-only-el extract-style-19" id="adminDashboardCard" class="admin-dashboard-card" >
+        <div class="section-toolbar" class="dashboard-toolbar">
+          <h3><i class="fa-solid fa-chart-line"></i> Admin Overview</h3>
           <button class="btn btn-secondary btn-sm" onclick="App.refreshAdminDashboard()">
              <i class="fa-solid fa-rotate-right"></i> Refresh
           </button>
         </div>
         
-        <div id="dashboardLoader" style="display: flex; flex-direction: column; align-items: center; padding: 20px;">
-           <i class="fa-solid fa-circle-notch fa-spin fa-2x mb-2" style="color: var(--cyan);"></i>
-           <span style="margin-top: 10px;">Loading statistics...</span>
+        <div id="dashboardLoader" class="dashboard-loader">
+           <i class="fa-solid fa-circle-notch fa-spin fa-2x mb-2 extract-style-20" ></i>
+           <span>Loading statistics...</span>
         </div>
-        <div id="dashboardError" style="display: none; color: #ff4757; text-align: center; padding: 20px;">
+        <div id="dashboardError"  class="extract-style-21">
            <i class="fa-solid fa-circle-xmark fa-2x mb-2"></i>
-           <div id="dashboardErrorText" style="margin-top: 10px;">Failed to load data.</div>
+           <div id="dashboardErrorText">Failed to load data.</div>
         </div>
         
-        <div id="dashboardContent" style="display: none;">
-          <div class="dashboard-kpis" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 15px; margin-bottom: 20px;">
-            <div class="kpi-card" style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 10px; text-align: center; border: 1px solid rgba(255,255,255,0.1);">
-               <div style="font-size: 0.75rem; color: #a4b0be; text-transform: uppercase; margin-bottom: 5px;">Total Students</div>
-               <div style="font-size: 1.8rem; font-weight: bold; color: var(--cyan);" id="dashTotalStudents">0</div>
+        <div id="dashboardContent"  class="extract-style-22">
+          <div class="dashboard-kpis" class="dashboard-kpi-grid">
+            <div class="kpi-card" class="dashboard-kpi-card">
+               <div class="dashboard-kpi-label">Total Students</div>
+               <div  class="extract-style-23" id="dashTotalStudents">0</div>
             </div>
-            <div class="kpi-card" style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 10px; text-align: center; border: 1px solid rgba(255,255,255,0.1);">
-               <div style="font-size: 0.75rem; color: #a4b0be; text-transform: uppercase; margin-bottom: 5px;">Employees</div>
-               <div style="font-size: 1.8rem; font-weight: bold; color: var(--purple);" id="dashTotalEmployees">0</div>
+            <div class="kpi-card" class="dashboard-kpi-card">
+               <div class="dashboard-kpi-label">Employees</div>
+               <div  class="extract-style-24" id="dashTotalEmployees">0</div>
             </div>
-            <div class="kpi-card" style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 10px; text-align: center; border: 1px solid rgba(255,255,255,0.1);">
-               <div style="font-size: 0.75rem; color: #a4b0be; text-transform: uppercase; margin-bottom: 5px;">Sessions Today</div>
-               <div style="font-size: 1.8rem; font-weight: bold; color: var(--emerald);" id="dashTotalSessions">0</div>
+            <div class="kpi-card" class="dashboard-kpi-card">
+               <div class="dashboard-kpi-label">Sessions Today</div>
+               <div  class="extract-style-25" id="dashTotalSessions">0</div>
             </div>
-            <div class="kpi-card" style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 10px; text-align: center; border: 1px solid rgba(255,255,255,0.1);">
-               <div style="font-size: 0.75rem; color: #a4b0be; text-transform: uppercase; margin-bottom: 5px;">Present Today</div>
-               <div style="font-size: 1.8rem; font-weight: bold; color: #2ed573;" id="dashTotalPresent">0</div>
+            <div class="kpi-card" class="dashboard-kpi-card">
+               <div class="dashboard-kpi-label">Present Today</div>
+               <div  class="extract-style-26" id="dashTotalPresent">0</div>
             </div>
-            <div class="kpi-card" style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 10px; text-align: center; border: 1px solid rgba(255,255,255,0.1);">
-               <div style="font-size: 0.75rem; color: #a4b0be; text-transform: uppercase; margin-bottom: 5px;">Absent Today</div>
-               <div style="font-size: 1.8rem; font-weight: bold; color: #ff4757;" id="dashTotalAbsent">0</div>
+            <div class="kpi-card" class="dashboard-kpi-card">
+               <div class="dashboard-kpi-label">Absent Today</div>
+               <div  class="extract-style-27" id="dashTotalAbsent">0</div>
             </div>
           </div>
           
-          <h4 style="margin-bottom: 10px; font-weight: 500;">Today's Sessions</h4>
+          <h4  class="extract-style-28">Today's Sessions</h4>
           <div class="table-container">
             <table class="custom-table">
               <thead>
@@ -416,8 +475,8 @@
               </tbody>
             </table>
           </div>
-          <div id="dashboardEmptySessions" style="display: none; text-align: center; padding: 20px; color: #a4b0be; background: rgba(255,255,255,0.02); border-radius: 8px;">
-             <i class="fa-solid fa-bed" style="font-size: 1.5rem; margin-bottom: 10px;"></i><br>
+          <div id="dashboardEmptySessions"  class="extract-style-29">
+             <i class="fa-solid fa-bed extract-style-30" ></i><br>
              No attendance sessions have been created today.
           </div>
         </div>
@@ -643,9 +702,9 @@
       <div class="admin-card">
         <div class="section-toolbar">
           <div class="search-filter-group">
-            <div class="flex-gap-xs" style="grid-column: 1 / -1; flex-wrap: wrap;">
+            <div class="flex-gap-xs extract-style-31" >
               <input type="date" id="analyticsFilterStartDate" class="input-styled analytics-date-picker" title="Start Date" aria-label="Start Date">
-              <span style="color:#a4b0be; align-self:center;">to</span>
+              <span  class="extract-style-32">to</span>
               <input type="date" id="analyticsFilterEndDate" class="input-styled analytics-date-picker" title="End Date" aria-label="End Date">
               <button type="button" class="btn btn-secondary btn-sm" onclick="App.clearAnalyticsDateFilter()" title="Clear Dates">
                 <i class="fa-solid fa-calendar-xmark"></i> Clear
@@ -653,8 +712,8 @@
             </div>
             
             <input type="text" id="analyticsSearch" class="input-styled" placeholder="Filter by roll number or name..." title="Filter by roll number or name">
-            <input type="text" id="analyticsFilterSubject" class="input-styled" placeholder="Filter Subject..." title="Filter Subject">
-            <input type="text" id="analyticsFilterEmployee" class="input-styled" placeholder="Filter Employee..." title="Filter Employee">
+            <input type="text" id="analyticsFilterSubject" class="input-styled" placeholder="Filter Subject..." title="Filter Subject" aria-label="Filter Subject">
+            <input type="text" id="analyticsFilterEmployee" class="input-styled" placeholder="Filter Employee..." title="Filter Employee" aria-label="Filter Employee">
 
             <select id="analyticsFilterBranch" class="select-styled" title="Filter Logs by Branch" aria-label="Filter Logs by Branch">
               <option value="ALL">All Branches</option>
@@ -959,7 +1018,7 @@
   
   <!-- MODAL: CLASSIFICATION RULES (Admin Only) -->
   <div class="modal-backdrop" id="modalClassificationRules">
-    <div class="modal-box modal-lg" style="max-width: 900px;">
+    <div class="modal-box modal-lg extract-style-33" >
       <div class="modal-header">
         <h3><i class="fa-solid fa-layer-group modal-icon-cyan"></i> Classification Rules</h3>
         <button class="btn btn-secondary btn-icon" onclick="App.closeModal('modalClassificationRules')">&times;</button>
@@ -999,9 +1058,9 @@
             </div>
           </div>
           <div class="account-form-row mt-3 align-items-center">
-            <div class="form-group form-group-flush" style="display:flex; align-items:center; gap: 8px;">
-              <input type="checkbox" id="ruleEnabled" checked style="width: 20px; height: 20px;">
-              <label for="ruleEnabled" style="margin: 0; font-weight: normal;">Enabled</label>
+            <div class="form-group form-group-flush extract-style-34" >
+              <input type="checkbox" id="ruleEnabled" checked  class="extract-style-35">
+              <label for="ruleEnabled"  class="extract-style-36">Enabled</label>
             </div>
             <div class="text-right flex-grow">
               <button type="button" class="btn btn-secondary btn-sm" onclick="document.getElementById('formAddClassificationRule').reset(); document.getElementById('ruleId').value='';">Clear</button>
@@ -1414,25 +1473,25 @@
         <button type="button" class="btn btn-secondary btn-icon" onclick="App.closeModal('modalEditRecord')">&times;</button>
       </div>
       <form id="formEditRecord" onsubmit="App.submitEditRecord(event)">
-        <input type="hidden" id="editRecordId">
+        <input type="hidden" id="editRecordId" title="Record ID" aria-label="Record ID">
         <div class="modal-body">
-          <p class="text-muted" style="margin-bottom: 15px; font-size: 0.9rem;">
+          <p class="text-muted extract-style-37" >
             <i class="fa-solid fa-circle-info"></i> Historical data cannot be silently modified. All changes are logged to the audit trail.
           </p>
           
           <div class="form-group">
             <label>Student</label>
-            <input type="text" id="editRecordStudent" class="input-styled" disabled style="opacity: 0.7;">
+            <input type="text" id="editRecordStudent" class="input-styled extract-style-38" disabled  title="Student Name" aria-label="Student Name" placeholder="Student">
           </div>
           
           <div class="form-group">
             <label>Original Scan Time</label>
-            <input type="text" id="editRecordTime" class="input-styled" disabled style="opacity: 0.7;">
+            <input type="text" id="editRecordTime" class="input-styled extract-style-39" disabled  title="Scan Time" aria-label="Scan Time" placeholder="Scan Time">
           </div>
           
           <div class="form-group">
             <label for="editRecordStatus">New Status *</label>
-            <select id="editRecordStatus" class="input-styled w-full" required>
+            <select id="editRecordStatus" class="input-styled w-full" required title="Edit Status" aria-label="Edit Status">
               <option value="Present">Present</option>
               <option value="Absent">Absent</option>
               <option value="Invalid">Invalid (Discard)</option>
@@ -1441,7 +1500,7 @@
           
           <div class="form-group">
             <label for="editRecordReason">Reason for Change (Optional)</label>
-            <input type="text" id="editRecordReason" class="input-styled" placeholder="e.g. Scanned wrong QR, manually verified">
+            <input type="text" id="editRecordReason" class="input-styled" placeholder="e.g. Scanned wrong QR, manually verified" title="Reason for Edit" aria-label="Reason for Edit">
           </div>
         </div>
         <div class="modal-footer">
@@ -1455,15 +1514,15 @@
 
   <!-- MODAL: AUDIT LOGS VIEWER (Admin Only) -->
   <div class="modal-backdrop" id="modalAuditViewer">
-    <div class="modal-box" style="max-width: 1000px;">
+    <div class="modal-box extract-style-40" >
       <div class="modal-header">
         <h3><i class="fa-solid fa-shield-halved modal-icon-emerald"></i> System Audit Logs</h3>
         <button type="button" class="btn btn-secondary btn-icon" onclick="App.closeModal('modalAuditViewer')">&times;</button>
       </div>
-      <div class="modal-body" style="padding-top: 0;">
-        <div class="section-toolbar" style="margin-bottom: 15px; padding-bottom: 15px; border-bottom: 1px solid rgba(255,255,255,0.1);">
+      <div class="modal-body audit-modal-body">
+        <div class="section-toolbar" class="section-toolbar audit-toolbar">
           <div class="search-filter-group">
-            <select id="auditFilterAction" class="select-styled" onchange="App.fetchAuditLogs(1)">
+            <select id="auditFilterAction" class="select-styled" onchange="App.fetchAuditLogs(1)" title="Filter Action" aria-label="Filter Action">
               <option value="">All Actions</option>
               <option value="login">Login</option>
               <option value="employee created">Employee Created</option>
@@ -1477,14 +1536,14 @@
               <option value="attendance modified">Attendance Modified</option>
               <option value="important configuration changes">Config Changes</option>
             </select>
-            <input type="text" id="auditFilterActor" class="input-styled" placeholder="Filter by Actor (Username)" oninput="App.delayFetchAudit()">
+            <input type="text" id="auditFilterActor" class="input-styled" placeholder="Filter by Actor (Username)" oninput="App.delayFetchAudit()" title="Filter Actor" aria-label="Filter Actor">
             <button class="btn btn-secondary btn-sm" onclick="App.fetchAuditLogs(1)"><i class="fa-solid fa-rotate-right"></i> Refresh</button>
           </div>
         </div>
         
-        <div class="table-container" style="max-height: 400px; overflow-y: auto;">
+        <div class="table-container" class="table-container audit-table-wrap">
           <table class="custom-table">
-            <thead style="position: sticky; top: 0; background: var(--bg-card); z-index: 10;">
+            <thead class="audit-thead">
               <tr>
                 <th>Timestamp</th>
                 <th>Actor</th>
@@ -1495,12 +1554,12 @@
               </tr>
             </thead>
             <tbody id="auditTableBody">
-               <tr><td colspan="6" style="text-align:center;">Loading audit logs...</td></tr>
+               <tr><td colspan="6"  class="extract-style-41">Loading audit logs...</td></tr>
             </tbody>
           </table>
         </div>
         
-        <div style="display: flex; justify-content: space-between; margin-top: 15px; color: #a4b0be; font-size: 0.9rem;">
+        <div class="pagination-footer">
            <div>Showing <span id="auditPageIndicator">Page 1</span></div>
            <div class="flex-gap-xs">
              <button class="btn btn-secondary btn-sm" id="btnAuditPrev" onclick="App.changeAuditPage(-1)"><i class="fa-solid fa-chevron-left"></i> Prev</button>
