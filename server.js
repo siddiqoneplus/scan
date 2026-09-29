@@ -243,8 +243,11 @@ const server = http.createServer(async (req, res) => {
         }
         
         const urlParams = new URL('http://127.0.0.1' + req.url).searchParams;
-        const page = parseInt(urlParams.get('page')) || 1;
-        const limit = parseInt(urlParams.get('limit')) || 50;
+        let page = parseInt(urlParams.get('page')) || 1;
+        let limit = parseInt(urlParams.get('limit')) || 50;
+        if (page < 1) page = 1;
+        if (limit < 1) limit = 50;
+        if (limit > 500) limit = 500;
         const query = (urlParams.get('query') || '').toLowerCase().trim();
         const branch = urlParams.get('branch') || 'ALL';
         const year = urlParams.get('year') || 'ALL';
@@ -298,11 +301,13 @@ const server = http.createServer(async (req, res) => {
           }
           
           return {
-            ...s,
-            branch,
-            year,
-            section,
-            assignedTo: s.assignedTo || body.assignedTo || 'all'
+            rollNo: String(s.rollNo || '').trim().substring(0,50).toUpperCase(),
+            name: String(s.name || '').trim().substring(0,100),
+            status: s.status === 'inactive' ? 'inactive' : 'active',
+            branch: branch ? String(branch).substring(0,50) : '',
+            year: year ? String(year).substring(0,20) : '',
+            section: section ? String(section).substring(0,50) : '',
+            assignedTo: String(s.assignedTo || body.assignedTo || 'all').substring(0,50)
           };
         });
         await db.saveStudents(normalized);
@@ -406,7 +411,17 @@ const server = http.createServer(async (req, res) => {
         if (!requireAdmin()) return;
         const body = await parseBody(req);
         try {
-           const rule = await db.saveClassificationRule(body);
+           const safeRule = {
+              id: typeof body.id === 'string' ? body.id.substring(0,50) : ('rule-' + Date.now()),
+              prefix: String(body.prefix || '').trim().substring(0, 50).toUpperCase(),
+              startRange: parseInt(body.startRange) || 0,
+              endRange: parseInt(body.endRange) || 999999,
+              branch: String(body.branch || '').substring(0, 50),
+              academicYear: String(body.academicYear || '').substring(0, 20),
+              section: String(body.section || '').substring(0, 50),
+              enabled: !!body.enabled
+           };
+           const rule = await db.saveClassificationRule(safeRule);
            return sendJson(res, 200, { success: true, rule });
         } catch (e) {
            return handleApiError(res, e);
@@ -482,8 +497,10 @@ const server = http.createServer(async (req, res) => {
         if (!user) return sendJson(res, 401, { success: false, error: 'Unauthorized' });
         const body = await parseBody(req);
         
-        if (!body.subject || !body.section || !body.period) {
-           return sendJson(res, 400, { success: false, error: 'Missing required session fields' });
+        if (!body.subject || !body.section || !body.period || 
+            typeof body.subject !== 'string' || typeof body.section !== 'string' || typeof body.period !== 'string' ||
+            body.subject.length > 100 || body.section.length > 50 || body.period.length > 50) {
+           return sendJson(res, 400, { success: false, error: 'Missing or invalid required session fields' });
         }
         
         const session = {
@@ -539,8 +556,11 @@ const server = http.createServer(async (req, res) => {
         if (!requireAdmin()) return;
         try {
           const urlParams = new URL('http://127.0.0.1' + req.url).searchParams;
-          const page = parseInt(urlParams.get('page')) || 1;
-          const limit = parseInt(urlParams.get('limit')) || 50;
+          let page = parseInt(urlParams.get('page')) || 1;
+          let limit = parseInt(urlParams.get('limit')) || 50;
+          if (page < 1) page = 1;
+          if (limit < 1) limit = 50;
+          if (limit > 500) limit = 500;
           const actionFilter = urlParams.get('action');
           const actorFilter = urlParams.get('actor');
           
@@ -1062,7 +1082,13 @@ const server = http.createServer(async (req, res) => {
           const updated = await db.updateEvent(body.eventId, body.updates || {});
           return sendJson(res, 200, { success: !!updated, event: updated });
         }
-        const event = await db.createEvent(body);
+        const safeEvent = {
+           id: typeof body.id === 'string' ? body.id : ('event-' + Date.now()),
+           name: String(body.name || 'Unnamed Event').substring(0, 100),
+           date: String(body.date || new Date().toISOString().split('T')[0]).substring(0, 20),
+           description: typeof body.description === 'string' ? body.description.substring(0, 500) : ''
+        };
+        const event = await db.createEvent(safeEvent);
         return sendJson(res, 201, { success: true, event });
       }
 
@@ -1092,8 +1118,8 @@ const server = http.createServer(async (req, res) => {
       if (req.method === 'POST') {
         if (!requireAdmin()) return;
         const body = await parseBody(req);
-        if (!body.eventId || !body.rollNumbers) {
-          return sendJson(res, 400, { success: false, error: 'eventId and rollNumbers[] are required' });
+        if (!body.eventId || !Array.isArray(body.rollNumbers)) {
+          return sendJson(res, 400, { success: false, error: 'eventId and rollNumbers array are required' });
         }
         const result = await db.registerStudentsToEvent(body.eventId, body.rollNumbers);
         return sendJson(res, 200, { success: true, ...result });
