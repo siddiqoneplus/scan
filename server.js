@@ -125,7 +125,7 @@ const server = http.createServer(async (req, res) => {
     };
 
     // 0. DATABASE STATUS & CONFIGURATION API
-    if (reqPath === '/api/db/status') {
+    if (reqPath === '/api/roster') {
       
       if (req.method === 'GET') {
         let roster = await db.getStudents();
@@ -207,7 +207,18 @@ const server = http.createServer(async (req, res) => {
       }
 
       // DELETE: Clear ALL students from DB + local JSON
-      
+
+
+      if (req.method === 'DELETE') {
+        if (!requireAdmin()) return;
+        await db.saveStudents([]);
+        return sendJson(res, 200, { success: true, message: 'All students cleared', count: 0 });
+      }
+    }
+
+    
+    // --- ATTENDANCE RECORD (MANUAL CORRECTION) ---
+    if (reqPath === '/api/attendance/record') {
       if (req.method === 'PATCH') {
          if (!requireAdmin()) return;
          
@@ -241,18 +252,29 @@ const server = http.createServer(async (req, res) => {
                auditTrail: auditTrail
             });
             
-            logAudit(user, 'attendance modified', recordId, { oldStatus: auditEntry.oldStatus, newStatus: auditEntry.newStatus }); return sendJson(res, 200, { success: true, record: updatedRecord });
+            logAudit(user, 'attendance modified', recordId, { oldStatus: auditEntry.oldStatus, newStatus: auditEntry.newStatus }); 
+            return sendJson(res, 200, { success: true, record: updatedRecord });
          } catch (e) {
             return handleApiError(res, e);
          }
       }
+    }
 
+    // --- STUDENT STATUS UPDATE ---
+    if (reqPath === '/api/roster/student' && req.method === 'PATCH') {
+      if (!requireAdmin()) return;
+      const body = await parseBody(req);
+      const urlParams = new URL('http://127.0.0.1' + req.url).searchParams;
+      const rollNo = body.rollNo || urlParams.get('rollNo');
+      if (!rollNo) return sendJson(res, 400, { success: false, error: 'rollNo required' });
 
-      if (req.method === 'DELETE') {
-        if (!requireAdmin()) return;
-        await db.saveStudents([]);
-        return sendJson(res, 200, { success: true, message: 'All students cleared', count: 0 });
-      }
+      const current = await db.getStudents();
+      const student = current.find(s => s.rollNo.toUpperCase() === rollNo.toUpperCase());
+      if (!student) return sendJson(res, 404, { success: false, error: 'Student not found' });
+
+      student.status = body.status === 'inactive' ? 'inactive' : 'active';
+      await db.saveStudents(current);
+      return sendJson(res, 200, { success: true, student });
     }
 
     // 1b. DELETE INDIVIDUAL STUDENT
@@ -344,7 +366,10 @@ const server = http.createServer(async (req, res) => {
     // --- SESSIONS API ---
     if (reqPath === '/api/sessions') {
       if (req.method === 'GET') {
-        const sessions = await db.getSessions();
+        let sessions = await db.getSessions();
+        if (!isAdmin) {
+           sessions = sessions.filter(s => s.employee === user.username);
+        }
         return sendJson(res, 200, { success: true, sessions });
       }
     }
@@ -745,7 +770,8 @@ const server = http.createServer(async (req, res) => {
     // 3a. SECURE QR SCAN ENDPOINT
     if (reqPath === '/api/attendance/scan' && req.method === 'POST') {
       const body = await parseBody(req);
-      const { qrPayload, sessionName, eventId } = body;
+      const { qrPayload, eventId } = body;
+      const sessionName = body.session || body.sessionName;
       
       if (!qrPayload) return sendJson(res, 400, { success: false, reason: 'invalid QR', error: 'Missing QR Payload' });
 
@@ -786,10 +812,25 @@ const server = http.createServer(async (req, res) => {
         return sendJson(res, 403, { success: false, reason: 'unauthorized student', error: `You are not authorized to mark attendance for ${rollNo}.` });
       }
 
-      // Active session verify
+      // Active session verify (IDOR & Auth Check)
       if (!sessionName) {
-        return sendJson(res, 400, { success: false, reason: 'no active session', error: 'No active session specified.' });
+         return sendJson(res, 400, { success: false, reason: 'no active session', error: 'No active session specified.' });
       }
+      
+      const allSessions = await db.getSessions();
+      const sessionObj = allSessions.find(s => s.sessionId === sessionName);
+      if (!sessionObj) {
+         return sendJson(res, 404, { success: false, reason: 'invalid session', error: 'The specified session does not exist.' });
+      }
+      if (sessionObj.status !== 'active') {
+         return sendJson(res, 403, { success: false, reason: 'session closed', error: 'This session is already closed.' });
+      }
+      if (!isAdmin && sessionObj.employee !== user.username) {
+         return sendJson(res, 403, { success: false, reason: 'unauthorized session', error: 'You are not authorized to mark attendance for another employee\'s session.' });
+      }
+      
+      // Override body.section with the actual session's section to ensure accurate data integrity
+      body.section = sessionObj.section;
       
       // Verify section if specified
       if (body.section && student.section && student.section.toUpperCase() !== body.section.toUpperCase()) {
