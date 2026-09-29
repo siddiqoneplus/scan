@@ -95,6 +95,22 @@
 </head>
 <body>
 
+  <!-- COLD START OVERLAY -->
+  <div id="coldStartOverlay" style="position:fixed;top:0;left:0;width:100%;height:100%;background:#0f172a;z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#fff;">
+      <div style="font-size: 3.5rem; margin-bottom: 20px; color: #10b981;"><i class="fa-solid fa-server fa-fade"></i></div>
+      <h2 style="margin: 0; font-family: 'Inter', sans-serif;">Waking up Server...</h2>
+      <p style="color: #94a3b8; text-align:center; max-width: 400px; padding: 20px; font-family: 'Inter', sans-serif;">
+        Render spins down the free tier database after inactivity. Please wait up to 50 seconds for the application to boot up securely.
+      </p>
+      <div style="width: 200px; height: 4px; background: #1e293b; border-radius: 4px; overflow: hidden;">
+         <div style="width: 50%; height: 100%; background: #10b981; animation: slide 1.5s infinite linear;"></div>
+      </div>
+      <style>
+         @keyframes slide { 0% { transform: translateX(-100%); } 100% { transform: translateX(200%); } }
+      </style>
+  </div>
+
+
   <!-- Top Navigation Header -->
   <header class="app-header">
     <a href="#" class="brand" onclick="App.switchTab('scanner'); return false;">

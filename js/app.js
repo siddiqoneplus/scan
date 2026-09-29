@@ -7,7 +7,41 @@
 const App = (() => {
   let activeTab = 'scanner';
 
+  
+  // --- COLD START WAKEUP ---
+  async function ensureServerAwake() {
+     const overlay = document.getElementById('coldStartOverlay');
+     if (!overlay) return;
+     
+     const maxRetries = 30; // Wait up to 60 seconds (2s per try)
+     let attempt = 0;
+     
+     while (attempt < maxRetries) {
+       try {
+         const controller = new AbortController();
+         const timeoutId = setTimeout(() => controller.abort(), 2000);
+         const res = await fetch('/api/health', { signal: controller.signal });
+         clearTimeout(timeoutId);
+         
+         if (res.ok) {
+           overlay.style.display = 'none';
+           return;
+         }
+       } catch (e) {
+         // Network error or timeout, server still booting
+       }
+       attempt++;
+       await new Promise(r => setTimeout(r, 2000));
+     }
+     
+     // Fallback if it completely fails, remove overlay so they can see standard errors
+     overlay.style.display = 'none';
+     showToast('Server seems offline. Check connection.', 'error');
+  }
+
+
   function init() {
+    ensureServerAwake();
     // Initialize auth
     AuthManager.init();
 

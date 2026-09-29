@@ -36,7 +36,7 @@ function sendJson(res, statusCode, data) {
   res.writeHead(statusCode, {
     'Content-Type': 'application/json; charset=utf-8',
     'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Methods': 'GET, POST, DELETE, OPTIONS',
+    'Access-Control-Allow-Methods': 'GET, POST, DELETE, PATCH, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type, Authorization',
     'Cache-Control': 'no-cache'
   });
@@ -64,6 +64,12 @@ const server = http.createServer(async (req, res) => {
   if (reqPath.startsWith('/api/')) {
 
     // --- AUTHENTICATION ---
+    
+    // --- HEALTH CHECK (Render Cold Start & Ping) ---
+    if (reqPath === '/api/health') {
+      return sendJson(res, 200, { success: true, status: 'ok', timestamp: new Date().toISOString() });
+    }
+
     if (reqPath === '/api/login' && req.method === 'POST') {
       const body = await parseBody(req);
       const accounts = await db.getAccounts();
@@ -133,7 +139,7 @@ const server = http.createServer(async (req, res) => {
           enriched = enriched.filter(s => s.assignedTo === 'all' || s.assignedTo === user.username);
         }
         
-        const urlParams = new URL('http://localhost' + req.url).searchParams;
+        const urlParams = new URL('http://127.0.0.1' + req.url).searchParams;
         const page = parseInt(urlParams.get('page')) || 1;
         const limit = parseInt(urlParams.get('limit')) || 50;
         const query = (urlParams.get('query') || '').toLowerCase().trim();
@@ -205,7 +211,7 @@ const server = http.createServer(async (req, res) => {
       if (req.method === 'PATCH') {
          if (!requireAdmin()) return;
          
-         const urlParams = new URL('http://localhost' + req.url).searchParams;
+         const urlParams = new URL('http://127.0.0.1' + req.url).searchParams;
          const recordId = urlParams.get('id');
          if (!recordId) return sendJson(res, 400, { success: false, error: 'Record ID required' });
          
@@ -404,7 +410,7 @@ const server = http.createServer(async (req, res) => {
       if (req.method === 'GET') {
         if (!requireAdmin()) return;
         try {
-          const urlParams = new URL('http://localhost' + req.url).searchParams;
+          const urlParams = new URL('http://127.0.0.1' + req.url).searchParams;
           const page = parseInt(urlParams.get('page')) || 1;
           const limit = parseInt(urlParams.get('limit')) || 50;
           const actionFilter = urlParams.get('action');
@@ -487,7 +493,7 @@ const server = http.createServer(async (req, res) => {
     // --- ATTENDANCE HISTORY (PAGINATED & FILTERED) ---
     if (reqPath === '/api/attendance/history') {
       if (req.method === 'GET') {
-        const urlParams = new URL('http://localhost' + req.url).searchParams;
+        const urlParams = new URL('http://127.0.0.1' + req.url).searchParams;
         const page = parseInt(urlParams.get('page')) || 1;
         const limit = parseInt(urlParams.get('limit')) || 50;
         const startDate = urlParams.get('startDate');
