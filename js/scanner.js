@@ -93,39 +93,44 @@ const ScannerEngine = (() => {
         return;
       }
 
+      updateStatus('Camera loading...', 'warning');
       const cameras = await Html5Qrcode.getCameras();
       if (!cameras || cameras.length === 0) {
         updateStatus('No camera found on this device', 'error');
         return;
       }
 
-      // Default to back camera on mobile or first camera on desktop
-      const selectedCamera = cameras.find(c => c.label.toLowerCase().includes('back') || c.label.toLowerCase().includes('rear')) || cameras[0];
-      currentCameraId = selectedCamera.id;
-
-      const config = {
-        fps: 30,
-        qrbox: { width: 200, height: 200 },
-        disableFlip: true,
-        experimentalFeatures: { useBarCodeDetectorIfSupported: true }
-      };
+      const cameraId = cameras[0].id;
+      currentCameraId = cameraId;
 
       await html5QrCode.start(
-        currentCameraId,
-        config,
-        (decodedText) => handleScanSuccess(decodedText),
-        (errorMessage) => {
-          // Continuous scanning ticks - ignore standard frame misses
-        }
+        cameraId,
+        {
+          fps: 15,
+          qrbox: { width: 280, height: 280 },
+          aspectRatio: 1.0,
+          disableFlip: false
+        },
+        handleScanSuccess,
+        undefined
       );
 
       isScanning = true;
-      updateStatus('Camera active. Align QR code within frame', 'success');
-      document.getElementById('btnToggleCamera').innerHTML = '<i class="fa-solid fa-camera-rotate"></i> Stop Camera';
-      document.getElementById('btnToggleCamera').classList.replace('btn-primary', 'btn-secondary');
+      document.getElementById('reader').classList.add('scanning-active');
+      
+      updateStatus('Scanner ready. Position QR code in frame.', 'success');
+      
+      const btn = document.getElementById('btnToggleCamera');
+      if (btn) btn.innerHTML = '<i class="fa-solid fa-camera-slash"></i> Stop Camera';
+
     } catch (err) {
-      console.error('Camera start error:', err);
-      updateStatus('Camera access denied or unavailable. Use File Scan or Quick Simulator below.', 'error');
+      console.warn('Camera start error:', err);
+      if (err.name === 'NotAllowedError' || (typeof err === 'string' && err.includes('permission'))) {
+        updateStatus('Camera permission denied. Please allow camera access.', 'error');
+      } else {
+        updateStatus('Camera failed to start: ' + (err.message || err), 'error');
+      }
+      isScanning = false;
     }
   }
 
@@ -181,56 +186,90 @@ const ScannerEngine = (() => {
   }
 
   async function processSecureScan(qrPayload) {
-    const activeSession = 'Attendance';
-    const hasEvent = typeof EventManager !== 'undefined' && EventManager.hasActiveEvent();
-    const eventId = hasEvent ? EventManager.getActiveEventId() : null;
+    const activeSession = typeof SessionManager !== 'undefined' ? SessionManager.getActiveSession() : null;
+    if (!activeSession) {
+      playSound('error');
+      showResultBanner({
+        type: 'error',
+        title: 'NO ACTIVE SESSION',
+        message: 'You must start an attendance session before scanning.',
+        rollNo: 'Unknown'
+      });
+      return;
+    }
+    
+    const sessionId = activeSession.sessionId;
 
     try {
       const res = await fetch('/api/attendance/scan', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ qrPayload, sessionName: activeSession, eventId })
+        body: JSON.stringify({ qrPayload, session: sessionId })
       });
-      const data = await res.json();
       
+      const data = await res.json();
       const student = data.student || null;
-      const rollNo = student ? student.rollNo : 'Unknown';
+      const rollNo = student ? student.rollNo : (data.rollNo || 'Unknown');
 
       if (res.ok && data.success) {
         playSound('success');
 
         if (typeof SessionManager !== 'undefined') {
-           SessionManager.recordScanned(studentName);
+           SessionManager.recordScanned(student ? student.name : rollNo);
         }
 
         showResultBanner({
           type: 'success',
-          title: 'ATTENDANCE SECURELY CONFIRMED',
-          message: 'Attendance verified and saved securely!',
+          title: 'ATTENDANCE CONFIRMED',
+          message: 'Attendance verified and saved securely.',
           rollNo: rollNo,
           student: student,
           record: data.record
         });
-        if (typeof App !== 'undefined') App.showToast(`Marked Present: ${student.name}`, 'success');
+        
+        if (typeof App !== 'undefined') App.showToast(`Marked Present: ${student ? student.name : rollNo}`, 'success');
         deferRefresh();
         requestAnimationFrame(() => triggerConfetti());
       } else {
-        playSound(data.reason === 'duplicate scan' ? 'warning' : 'error');
+        const errorMsg = data.error || 'Failed to process QR code.';
+        let type = 'error';
+        let title = 'SCAN FAILED';
+        
+        if (data.reason === 'duplicate scan' || errorMsg.toLowerCase().includes('already marked')) {
+           type = 'warning';
+           title = 'ALREADY MARKED PRESENT';
+        } else if (errorMsg.toLowerCase().includes('not found')) {
+           title = 'STUDENT NOT FOUND';
+        } else if (errorMsg.toLowerCase().includes('inactive')) {
+           title = 'STUDENT INACTIVE';
+        } else if (errorMsg.toLowerCase().includes('unauthorized')) {
+           title = 'UNAUTHORIZED';
+        } else if (errorMsg.toLowerCase().includes('does not match section')) {
+           title = 'WRONG SECTION';
+        } else if (errorMsg.toLowerCase().includes('session')) {
+           title = 'INVALID SESSION';
+        } else if (errorMsg.toLowerCase().includes('invalid')) {
+           title = 'INVALID QR';
+        }
+
+        playSound(type === 'warning' ? 'warning' : 'error');
         showResultBanner({
-          type: data.reason === 'duplicate scan' ? 'warning' : 'error',
-          title: data.reason === 'duplicate scan' ? 'ALREADY MARKED PRESENT' : 'SCAN FAILED',
-          message: data.error || 'Failed to process QR code.',
+          type,
+          title,
+          message: errorMsg,
           rollNo: rollNo,
           student: student,
           record: data.record
         });
-        if (data.reason !== 'duplicate scan') {
-          if (typeof App !== 'undefined') App.showToast(`Error: ${data.error}`, 'error');
-        }
       }
     } catch (e) {
       playSound('error');
-      if (typeof App !== 'undefined') App.showToast('Network error during scan verification', 'error');
+      showResultBanner({
+        type: 'error',
+        title: 'NETWORK FAILURE',
+        message: 'Could not communicate with the server. Check your connection.',
+        rollNo: 'Unknown'
+      });
     }
   }
 
