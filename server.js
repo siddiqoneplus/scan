@@ -18,10 +18,21 @@ const MIME_TYPES = {
   '.ico': 'image/x-icon'
 };
 
+const MAX_BODY_SIZE = 2 * 1024 * 1024; // 2MB limit
+
 function parseBody(req) {
-  return new Promise((resolve) => {
+  return new Promise((resolve, reject) => {
     let body = '';
-    req.on('data', chunk => { body += chunk; });
+    let size = 0;
+    req.on('data', chunk => {
+      size += chunk.length;
+      if (size > MAX_BODY_SIZE) {
+        req.destroy();
+        resolve({ __oversized: true });
+        return;
+      }
+      body += chunk;
+    });
     req.on('end', () => {
       try {
         resolve(body ? JSON.parse(body) : {});
@@ -30,6 +41,26 @@ function parseBody(req) {
       }
     });
   });
+}
+
+// --- ERROR HANDLING ---
+function handleApiError(res, err) {
+  console.error('[API Error]', err.message || err);
+  const message = (err.message || 'Internal server error').replace(/mongodb|mongo|atlas|cluster|srv/gi, '[database]');
+  const status = err.statusCode || 500;
+  return sendJson(res, status, { success: false, error: message });
+}
+
+// --- AUDIT LOGGING ---
+function logAudit(user, action, targetId, details) {
+  const entry = {
+    actor: user ? (user.displayName || user.username) : 'system',
+    action,
+    targetId: targetId || null,
+    details: details || {},
+    ip: 'server'
+  };
+  db.addAuditLog(entry).catch(e => console.warn('[Audit] Failed to log:', e.message));
 }
 
 function sendJson(res, statusCode, data) {
@@ -96,6 +127,13 @@ const server = http.createServer(async (req, res) => {
   // -------------------------------------------------------------
 
   if (reqPath.startsWith('/api/')) {
+    // Check for oversized body early
+    if (req.method === 'POST' || req.method === 'PATCH' || req.method === 'PUT') {
+      const contentLength = parseInt(req.headers['content-length'] || '0', 10);
+      if (contentLength > MAX_BODY_SIZE) {
+        return sendJson(res, 413, { success: false, error: 'Request body too large' });
+      }
+    }
     // Determine real IP accounting for Render proxy (x-forwarded-for)
     const rawIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown';
     const clientIp = rawIp.split(',')[0].trim(); // Handle multiple proxies
@@ -642,8 +680,11 @@ const server = http.createServer(async (req, res) => {
     if (reqPath === '/api/attendance/history') {
       if (req.method === 'GET') {
         const urlParams = new URL('http://127.0.0.1' + req.url).searchParams;
-        const page = parseInt(urlParams.get('page')) || 1;
-        const limit = parseInt(urlParams.get('limit')) || 50;
+        let page = parseInt(urlParams.get('page')) || 1;
+        let limit = parseInt(urlParams.get('limit')) || 50;
+        if (page < 1) page = 1;
+        if (limit < 1) limit = 50;
+        if (limit > 500) limit = 500;
         const startDate = urlParams.get('startDate');
         const endDate = urlParams.get('endDate');
         const branch = urlParams.get('branch');
@@ -798,8 +839,11 @@ const server = http.createServer(async (req, res) => {
              throw new Error(`Student ${cleanRoll} does not match section ${reqRecord.section}`);
           }
           
+          // Server generates ID — never trust client-provided IDs
+          const VALID_STATUSES = ['Present', 'Absent', 'Late'];
+          const clientStatus = typeof reqRecord.status === 'string' ? reqRecord.status : 'Present';
           return {
-            id: reqRecord.id || ('att-' + Date.now() + '-' + Math.random().toString(36).substr(2, 5)),
+            id: 'att-' + Date.now() + '-' + Math.random().toString(36).substr(2, 5),
             rollNo: student.rollNo,
             name: student.name,
             branch: student.branch,
@@ -809,8 +853,8 @@ const server = http.createServer(async (req, res) => {
             date: today,
             timestamp: nowTime,
             eventId: reqRecord.eventId || null,
-            status: reqRecord.status || 'Present',
-            walkIn: reqRecord.walkIn || false,
+            status: VALID_STATUSES.includes(clientStatus) ? clientStatus : 'Present',
+            walkIn: !!reqRecord.walkIn,
             markedBy: user.displayName || user.username
           };
         };
@@ -861,10 +905,6 @@ const server = http.createServer(async (req, res) => {
         } else {
            return sendJson(res, 400, { success: false, error: 'Invalid payload format' });
         }
-
-        const logsAfter = await db.getAttendance();
-        const filteredLogs = allowedRolls !== null ? logsAfter.filter(log => allowedRolls.has((log.rollNo || '').toUpperCase())) : logsAfter;
-        return sendJson(res, 200, { success: true, count: filteredLogs.length, logs: filteredLogs });
       }
 
       if (req.method === 'DELETE') {
@@ -886,7 +926,8 @@ const server = http.createServer(async (req, res) => {
         }
 
         const result = await db.deleteAttendanceRecord(recordId);
-        if(reqPath==='/api/students') logAudit(user, 'student deactivated', recordId); return sendJson(res, 200, { success: true, message: result.message, count: result.count });
+        logAudit(user, 'attendance deleted', recordId);
+        return sendJson(res, 200, { success: true, message: result.message, count: result.count });
       }
     }
 
@@ -1042,7 +1083,13 @@ const server = http.createServer(async (req, res) => {
                  throw new Error(`Password is required for new account: ${acc.username}`);
              }
              
-             return { ...acc, password: finalPassword };
+             return {
+               username: String(acc.username || '').trim().toLowerCase().substring(0, 50),
+               displayName: String(acc.displayName || acc.username || '').substring(0, 100),
+               role: acc.role === 'admin' ? 'admin' : 'employee',
+               createdAt: acc.createdAt || new Date().toISOString(),
+               password: finalPassword
+             };
           }));
           
           await db.saveAccounts(mergedAccounts);
@@ -1052,21 +1099,7 @@ const server = http.createServer(async (req, res) => {
       }
     }
 
-    // 5. BRANCH RULES API
-    if (reqPath === '/api/rules') {
-      if (req.method === 'GET') {
-        const rules = await db.getRules();
-        return sendJson(res, 200, { success: true, rules });
-      }
-
-      if (req.method === 'POST') {
-        if (!requireAdmin()) return;
-        const body = await parseBody(req);
-        const rules = body.rules || body;
-        await db.saveRules(rules);
-        return sendJson(res, 200, { success: true, rules });
-      }
-    }
+    // 5. BRANCH RULES API (merged into Classification Rules at /api/rules above)
 
     // 6. EVENTS API
     if (reqPath === '/api/events') {
@@ -1079,7 +1112,13 @@ const server = http.createServer(async (req, res) => {
         if (!requireAdmin()) return;
         const body = await parseBody(req);
         if (body.action === 'update' && body.eventId) {
-          const updated = await db.updateEvent(body.eventId, body.updates || {});
+          const safeUpdates = {};
+          if (typeof body.updates === 'object' && body.updates) {
+            if (typeof body.updates.name === 'string') safeUpdates.name = body.updates.name.substring(0, 100);
+            if (typeof body.updates.date === 'string') safeUpdates.date = body.updates.date.substring(0, 20);
+            if (typeof body.updates.description === 'string') safeUpdates.description = body.updates.description.substring(0, 500);
+          }
+          const updated = await db.updateEvent(body.eventId, safeUpdates);
           return sendJson(res, 200, { success: !!updated, event: updated });
         }
         const safeEvent = {
@@ -1144,9 +1183,54 @@ const server = http.createServer(async (req, res) => {
   // -------------------------------------------------------------
   let filePath = path.join(PUBLIC_DIR, reqPath === '/' ? '/index.html' : reqPath);
 
-  // Security check: ensure path stays within PUBLIC_DIR
-  if (!filePath.startsWith(PUBLIC_DIR)) {
+  // Security: normalize and ensure path stays within PUBLIC_DIR
+  filePath = path.resolve(filePath);
+  if (!filePath.startsWith(path.resolve(PUBLIC_DIR))) {
     res.writeHead(403);
+    res.end('Forbidden');
+    return;
+  }
+
+  // Security: Block access to sensitive files and directories
+  const BLOCKED_PATHS = ['.env', '.gitignore', 'server.js', 'db.js', 'package.json', 'package-lock.json'];
+  const BLOCKED_DIRS = ['data', 'node_modules', '.git'];
+  const ALLOWED_EXTENSIONS = new Set(['.html', '.css', '.js', '.json', '.png', '.jpg', '.jpeg', '.svg', '.ico', '.woff', '.woff2', '.ttf', '.eot', '.map']);
+
+  const relative = path.relative(PUBLIC_DIR, filePath).replace(/\\/g, '/');
+
+  // Block specific files in root
+  if (BLOCKED_PATHS.includes(relative.toLowerCase())) {
+    res.writeHead(403, { 'Content-Type': 'text/plain' });
+    res.end('Forbidden');
+    return;
+  }
+
+  // Block entire directories
+  const topDir = relative.split('/')[0].toLowerCase();
+  if (BLOCKED_DIRS.includes(topDir)) {
+    res.writeHead(403, { 'Content-Type': 'text/plain' });
+    res.end('Forbidden');
+    return;
+  }
+
+  // Block dotfiles
+  if (relative.startsWith('.') || relative.includes('/.')) {
+    res.writeHead(403, { 'Content-Type': 'text/plain' });
+    res.end('Forbidden');
+    return;
+  }
+
+  // Block root-level .js files (server code) — only allow js/ subdirectory
+  const ext = path.extname(filePath).toLowerCase();
+  if (ext === '.js' && !relative.startsWith('js/')) {
+    res.writeHead(403, { 'Content-Type': 'text/plain' });
+    res.end('Forbidden');
+    return;
+  }
+
+  // Block unknown file extensions
+  if (ext && !ALLOWED_EXTENSIONS.has(ext)) {
+    res.writeHead(403, { 'Content-Type': 'text/plain' });
     res.end('Forbidden');
     return;
   }
@@ -1158,7 +1242,6 @@ const server = http.createServer(async (req, res) => {
       return;
     }
 
-    const ext = path.extname(filePath).toLowerCase();
     const contentType = MIME_TYPES[ext] || 'application/octet-stream';
 
     res.writeHead(200, {
