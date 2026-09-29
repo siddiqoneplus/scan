@@ -7,8 +7,22 @@
 const QRStudio = (() => {
   let activeFilterBranch = 'ALL';
   let activeFilterYear = 'ALL';
+  let secureTokens = {};
 
-  function renderStudentBadges() {
+  async function fetchSecureTokens() {
+    try {
+      const res = await fetch('/api/roster/qr-tokens');
+      const data = await res.json();
+      if (data.success) {
+        secureTokens = data.tokens;
+      }
+    } catch (e) {
+      console.warn("Failed to fetch secure QR tokens", e);
+    }
+  }
+
+  async function renderStudentBadges() {
+    await fetchSecureTokens();
     const container = document.getElementById('cardsContainer');
     if (!container) return;
 
@@ -61,9 +75,10 @@ const QRStudio = (() => {
 
       container.appendChild(card);
 
-      // Render QR inside qrBox
+      // Render QR inside qrBox using secure token instead of raw roll number
       setTimeout(() => {
-        generateQRCode(qrBoxId, student.rollNo);
+        const payload = secureTokens[student.rollNo] || student.rollNo;
+        generateQRCode(qrBoxId, payload);
       }, 50);
     });
   }
@@ -145,17 +160,17 @@ const QRStudio = (() => {
         } else {
           tempDiv.remove();
           // Tertiary fallback: remote API
-          fetchDirectQr(rollNo, studentName, cleanRoll, filename);
+          fetchDirectQr(secureTokens[rollNo] || rollNo, studentName, cleanRoll, filename);
         }
       }, 50);
       return;
     } catch (e) {
-      fetchDirectQr(rollNo, studentName, cleanRoll, filename);
+      fetchDirectQr(secureTokens[rollNo] || rollNo, studentName, cleanRoll, filename);
     }
   }
 
-  function fetchDirectQr(rollNo, studentName, cleanRoll, filename) {
-    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=${encodeURIComponent(rollNo)}&margin=15`;
+  function fetchDirectQr(payload, studentName, cleanRoll, filename) {
+    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=${encodeURIComponent(payload)}&margin=15`;
     fetch(qrUrl)
       .then(res => res.blob())
       .then(blob => {
@@ -196,6 +211,7 @@ const QRStudio = (() => {
   }
 
   return {
+    fetchSecureTokens,
     renderStudentBadges,
     generateQRCode,
     downloadQR,

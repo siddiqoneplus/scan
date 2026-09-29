@@ -216,7 +216,8 @@ async function saveStudents(studentsList) {
           branch: s.branch || '',
           year: s.year || '',
           section: s.section || '',
-          assignedTo: s.assignedTo || 'all'
+          assignedTo: s.assignedTo || 'all',
+          status: s.status || 'active'
         });
       }
     });

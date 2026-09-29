@@ -218,6 +218,22 @@ const server = http.createServer(async (req, res) => {
       }
     }
 
+    // 2b. SECURE QR TOKENS
+    if (reqPath === '/api/roster/qr-tokens') {
+      if (req.method === 'GET') {
+        if (!requireAdmin()) return;
+        const roster = await db.getStudents();
+        const jwt = require('jsonwebtoken');
+        const JWT_SECRET = process.env.JWT_SECRET || 'fallback-secret-for-dev';
+        
+        const tokens = {};
+        roster.forEach(s => {
+          tokens[s.rollNo] = jwt.sign({ rollNo: s.rollNo, type: 'student_qr' }, JWT_SECRET);
+        });
+        return sendJson(res, 200, { success: true, tokens });
+      }
+    }
+
     // 3. ATTENDANCE LOGS API
     if (reqPath === '/api/attendance') {
       // Helper function to get allowed roll numbers for employee
@@ -240,41 +256,6 @@ const server = http.createServer(async (req, res) => {
         
         return sendJson(res, 200, { success: true, logs });
       }
-
-      if (req.method === 'POST') {
-        const body = await parseBody(req);
-        const allowedRolls = await getAllowedRolls();
-
-        // 1. If an individual scanned record is supplied
-        if (body.record) {
-          if (allowedRolls !== null && !allowedRolls.has((body.record.rollNo || '').toUpperCase())) {
-            return sendJson(res, 403, { success: false, error: 'Access denied: unauthorized student roll no' });
-          }
-          await db.addAttendanceRecord(body.record);
-        } else if (body.rollNo && !body.logs) {
-          if (allowedRolls !== null && !allowedRolls.has((body.rollNo || '').toUpperCase())) {
-            return sendJson(res, 403, { success: false, error: 'Access denied: unauthorized student roll no' });
-          }
-          await db.addAttendanceRecord(body);
-        }
-
-        // 2. If bulk/sync logs are supplied
-        if (body.logs && Array.isArray(body.logs) && body.logs.length > 0) {
-          if (allowedRolls !== null) {
-            const unauthorized = body.logs.some(log => !allowedRolls.has((log.rollNo || '').toUpperCase()));
-            if (unauthorized) {
-              return sendJson(res, 403, { success: false, error: 'Access denied: batch contains unauthorized student roll no' });
-            }
-          }
-          await db.saveAttendance(body.logs);
-        }
-
-        const logs = await db.getAttendance();
-        // Return only allowed logs for consistency
-        const filteredLogs = allowedRolls !== null ? logs.filter(log => allowedRolls.has((log.rollNo || '').toUpperCase())) : logs;
-        return sendJson(res, 200, { success: true, count: filteredLogs.length, logs: filteredLogs });
-      }
-
       if (req.method === 'DELETE') {
         const body = await parseBody(req);
         const recordId = body.id || params.get('id') || 'all';
@@ -296,6 +277,94 @@ const server = http.createServer(async (req, res) => {
         const result = await db.deleteAttendanceRecord(recordId);
         return sendJson(res, 200, { success: true, message: result.message, count: result.count });
       }
+    }
+
+    // 3a. SECURE QR SCAN ENDPOINT
+    if (reqPath === '/api/attendance/scan' && req.method === 'POST') {
+      const body = await parseBody(req);
+      const { qrPayload, sessionName, eventId } = body;
+      
+      if (!qrPayload) return sendJson(res, 400, { success: false, reason: 'invalid QR', error: 'Missing QR Payload' });
+
+      const jwt = require('jsonwebtoken');
+      const JWT_SECRET = process.env.JWT_SECRET || 'fallback-secret-for-dev';
+      
+      let decoded;
+      try {
+        decoded = jwt.verify(qrPayload, JWT_SECRET);
+        if (decoded.type !== 'student_qr') throw new Error('Invalid token type');
+      } catch (err) {
+        return sendJson(res, 400, { success: false, reason: 'invalid QR', error: 'Invalid or forged QR Code. Legacy codes are not accepted.' });
+      }
+
+      const rollNo = decoded.rollNo;
+      const roster = await db.getStudents();
+      const student = roster.find(s => s.rollNo.toUpperCase() === rollNo.toUpperCase());
+
+      if (!student) {
+        return sendJson(res, 404, { success: false, reason: 'unregistered student', error: `Student ${rollNo} not found in database.` });
+      }
+      
+      // "Verify the student is active"
+      if (student.status === 'inactive') {
+         return sendJson(res, 403, { success: false, reason: 'inactive student', error: `Student ${rollNo} is marked inactive.` });
+      }
+
+      const allowedRolls = async () => {
+        if (isAdmin) return null;
+        return new Set(
+          roster.filter(s => (s.assignedTo || 'all') === 'all' || s.assignedTo === user.username)
+                .map(s => s.rollNo.toUpperCase())
+        );
+      };
+      
+      const rolls = await allowedRolls();
+      if (rolls !== null && !rolls.has(rollNo.toUpperCase())) {
+        return sendJson(res, 403, { success: false, reason: 'unauthorized student', error: `You are not authorized to mark attendance for ${rollNo}.` });
+      }
+
+      // Active session verify
+      if (!sessionName) {
+        return sendJson(res, 400, { success: false, reason: 'no active session', error: 'No active session specified.' });
+      }
+      
+      // Verify section if specified
+      if (body.section && student.section && student.section.toUpperCase() !== body.section.toUpperCase()) {
+        return sendJson(res, 403, { success: false, reason: 'unauthorized student', error: `Student ${rollNo} does not belong to section ${body.section}.` });
+      }
+
+      // Check Duplicate
+      const logs = await db.getAttendance();
+      const today = new Date().toISOString().split('T')[0];
+      const existing = logs.find(r => 
+         r.rollNo.toUpperCase() === rollNo.toUpperCase() && 
+         (r.date === today || !r.date) && 
+         r.session === sessionName && 
+         (eventId ? r.eventId === eventId : true)
+      );
+
+      if (existing) {
+        return sendJson(res, 200, { success: false, reason: 'duplicate scan', error: `Already marked present`, record: existing, student });
+      }
+
+      // Create record
+      const now = new Date();
+      const record = {
+        id: 'att-' + Date.now() + '-' + Math.random().toString(36).substr(2, 5),
+        rollNo: student.rollNo,
+        name: student.name,
+        branch: student.branch,
+        year: student.year,
+        section: student.section || '',
+        session: sessionName,
+        date: today,
+        timestamp: now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+        eventId: eventId || null,
+        markedBy: user.displayName || user.username
+      };
+
+      await db.addAttendanceRecord(record);
+      return sendJson(res, 200, { success: true, reason: 'successful scan', record, student });
     }
 
     // 3b. ATOMIC PURGE: Clear ALL students AND attendance permanently

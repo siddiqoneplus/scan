@@ -1,26 +1,20 @@
 [
   {
-    "rollNo": "A1",
-    "name": "Alice",
+    "rollNo": "QR1",
+    "name": "Valid Student",
     "branch": "",
     "year": "",
     "section": "",
-    "assignedTo": "employee"
+    "assignedTo": "all",
+    "status": "active"
   },
   {
-    "rollNo": "A2",
-    "name": "Bob",
+    "rollNo": "QR2",
+    "name": "Inactive Student",
     "branch": "",
     "year": "",
     "section": "",
-    "assignedTo": "admin"
-  },
-  {
-    "rollNo": "A3",
-    "name": "Charlie",
-    "branch": "",
-    "year": "",
-    "section": "",
-    "assignedTo": "all"
+    "assignedTo": "all",
+    "status": "inactive"
   }
 ]

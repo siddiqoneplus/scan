@@ -165,9 +165,68 @@ const ScannerEngine = (() => {
     }
 
     lastScannedText = cleanText;
-    lastScanTime = now;
+    // Must be a secure QR code (JWT payload)
+    if (!cleanText.startsWith('eyJ')) {
+      playSound('error');
+      showResultBanner({
+        type: 'error',
+        title: 'LEGACY QR REJECTED',
+        message: 'Insecure or tampered QR code detected. Please print a new secure badge.',
+        rollNo: cleanText
+      });
+      return;
+    }
 
-    processRollNumber(cleanText);
+    processSecureScan(cleanText);
+  }
+
+  async function processSecureScan(qrPayload) {
+    const activeSession = 'Attendance';
+    const hasEvent = typeof EventManager !== 'undefined' && EventManager.hasActiveEvent();
+    const eventId = hasEvent ? EventManager.getActiveEventId() : null;
+
+    try {
+      const res = await fetch('/api/attendance/scan', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ qrPayload, sessionName: activeSession, eventId })
+      });
+      const data = await res.json();
+      
+      const student = data.student || null;
+      const rollNo = student ? student.rollNo : 'Unknown';
+
+      if (res.ok && data.success) {
+        playSound('success');
+        showResultBanner({
+          type: 'success',
+          title: 'ATTENDANCE SECURELY CONFIRMED',
+          message: 'Attendance verified and saved securely!',
+          rollNo: rollNo,
+          student: student,
+          record: data.record
+        });
+        if (typeof App !== 'undefined') App.showToast(`Marked Present: ${student.name}`, 'success');
+        deferRefresh();
+        requestAnimationFrame(() => triggerConfetti());
+      } else {
+        playSound(data.reason === 'duplicate scan' ? 'warning' : 'error');
+        showResultBanner({
+          type: data.reason === 'duplicate scan' ? 'warning' : 'error',
+          title: data.reason === 'duplicate scan' ? 'ALREADY MARKED PRESENT' : 'SCAN FAILED',
+          message: data.error || 'Failed to process QR code.',
+          rollNo: rollNo,
+          student: student,
+          record: data.record
+        });
+        if (data.reason !== 'duplicate scan') {
+          if (typeof App !== 'undefined') App.showToast(`Error: ${data.error}`, 'error');
+        }
+      }
+    } catch (e) {
+      playSound('error');
+      if (typeof App !== 'undefined') App.showToast('Network error during scan verification', 'error');
+    }
   }
 
   /**
@@ -544,6 +603,7 @@ const ScannerEngine = (() => {
     stopCamera,
     toggleCamera,
     processRollNumber,
+    processSecureScan,
     scanFromFile,
     toggleSound,
     updateStatus

@@ -337,10 +337,28 @@ const App = (() => {
     container.innerHTML = html;
   }
 
-  function simulateScan(rollNo) {
+  async function simulateScan(rollNo) {
     if (activeTab !== 'scanner') {
       switchTab('scanner');
     }
+    
+    // For simulation, we want to test the actual secure QR pipeline
+    try {
+      const res = await fetch('/api/roster/qr-tokens');
+      const data = await res.json();
+      if (data.success && data.tokens[rollNo]) {
+        // Mock the camera success handler passing the secure JWT
+        if (typeof ScannerEngine.handleScanSuccess === 'function') {
+           ScannerEngine.handleScanSuccess(data.tokens[rollNo]);
+        } else {
+           // Direct call to processSecureScan if handleScanSuccess isn't exported
+           ScannerEngine.processSecureScan(data.tokens[rollNo]);
+        }
+        return;
+      }
+    } catch (e) {}
+
+    // Fallback if not admin or token fetch fails
     ScannerEngine.processRollNumber(rollNo);
   }
 
