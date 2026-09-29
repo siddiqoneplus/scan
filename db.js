@@ -20,14 +20,14 @@ if (!fs.existsSync(DATA_DIR)) {
 const DEFAULT_ACCOUNTS = [
   {
     username: 'admin',
-    password: 'admin123',
+    password: process.env.ADMIN_PASSWORD ? require('bcryptjs').hashSync(process.env.ADMIN_PASSWORD, 10) : '$2b$10$bVIzslPngwAjsNpmTznpJe5gS2rypis5jr.W7F4uzLHzNTRMUHtVq',
     displayName: 'Administrator',
     role: 'admin',
     createdAt: new Date().toISOString()
   },
   {
     username: 'employee',
-    password: 'emp123',
+    password: process.env.EMPLOYEE_PASSWORD ? require('bcryptjs').hashSync(process.env.EMPLOYEE_PASSWORD, 10) : '$2b$10$6TdDmFuuliB8Z8FOYsMBIO5Fo7S7Pq5cpVWIQc/4QW2.pggI//nWe',
     displayName: 'Staff Member',
     role: 'employee',
     createdAt: new Date().toISOString()

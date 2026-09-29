@@ -36,14 +36,14 @@ const AuthManager = (() => {
   const DEFAULT_ACCOUNTS = [
     {
       username: 'admin',
-      password: 'admin123',
+
       displayName: 'Administrator',
       role: 'admin',
       createdAt: new Date().toISOString()
     },
     {
       username: 'employee',
-      password: 'emp123',
+
       displayName: 'Staff Member',
       role: 'employee',
       createdAt: new Date().toISOString()
