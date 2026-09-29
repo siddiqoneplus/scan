@@ -1,37 +1,37 @@
 [
   {
     "username": "admin",
-    "password": "admin123",
+    "password": "$2b$10$QWJ/e/WHkPGrQZI.R7qhL.NgEukqBlVxJYwu/bnd62kZavFg2hDcK",
     "displayName": "Administrator",
     "role": "admin",
     "createdAt": "2026-09-07T19:14:49.154Z"
   },
   {
     "username": "employee",
-    "password": "emp123",
+    "password": "$2b$10$u0pC1/mel9VZFCnOrPTrY.aFOPjBFHvPW2C.HK/jjb5uZg4NdUBxK",
     "displayName": "Staff Member",
     "role": "employee",
     "createdAt": "2026-09-07T19:14:49.155Z"
   },
   {
+    "username": "emp3",
+    "password": "$2b$10$AsnRPLUlx3X88GFPXvEusuDB8nGyXL7muAA9dt82BQC83CpnAKxWW",
+    "displayName": "emp3",
+    "role": "employee",
+    "createdAt": "2026-09-10T06:49:20.566Z"
+  },
+  {
     "username": "emp1",
-    "password": "emp123",
+    "password": "$2b$10$QSDqt.aj4o30.w9fYLMJZuCMdmf.AOlob5UNzpKbUO26yp8NxZxgG",
     "displayName": "emp1",
     "role": "employee",
     "createdAt": "2026-09-10T06:48:41.945Z"
   },
   {
     "username": "emp2",
-    "password": "emp123",
+    "password": "$2b$10$g25X0MTyTmRWNoWgSQWBg.MBVN3Pl4UTQ7aRgT4.TtZKucqwwZXMy",
     "displayName": "emp2",
     "role": "employee",
     "createdAt": "2026-09-10T06:48:52.755Z"
-  },
-  {
-    "username": "emp3",
-    "password": "emp123",
-    "displayName": "emp3",
-    "role": "employee",
-    "createdAt": "2026-09-10T06:49:20.566Z"
   }
 ]

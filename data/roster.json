@@ -1,9 +1,9 @@
 [
   {
-    "rollNo": "DUP1",
-    "name": "Duplicate 1",
-    "branch": "General",
-    "year": "2024 Batch (3rd Year)",
+    "rollNo": "TEST1234",
+    "name": "Injection Tester",
+    "branch": "",
+    "year": "",
     "section": "",
     "assignedTo": "all",
     "status": "active"
