@@ -120,29 +120,55 @@ const server = http.createServer(async (req, res) => {
 
     // 0. DATABASE STATUS & CONFIGURATION API
     if (reqPath === '/api/db/status') {
+      
       if (req.method === 'GET') {
-        if (!requireAdmin()) return;
-        const status = await db.getStatus();
-        return sendJson(res, 200, { success: true, db: status });
-      }
-    }
-
-    // 1. ROSTER API
-    if (reqPath === '/api/roster') {
-      if (req.method === 'GET') {
-        const roster = await db.getStudents();
+        let roster = await db.getStudents();
         let enriched = roster.map(s => ({
           ...s,
-          assignedTo: s.assignedTo || 'all'
+          assignedTo: s.assignedTo || 'all',
+          status: s.status || 'active'
         }));
         
-        // Employee API Data Filtering
         if (!isAdmin) {
           enriched = enriched.filter(s => s.assignedTo === 'all' || s.assignedTo === user.username);
         }
         
-        return sendJson(res, 200, { success: true, students: enriched });
+        const urlParams = new URL('http://localhost' + req.url).searchParams;
+        const page = parseInt(urlParams.get('page')) || 1;
+        const limit = parseInt(urlParams.get('limit')) || 50;
+        const query = (urlParams.get('query') || '').toLowerCase().trim();
+        const branch = urlParams.get('branch') || 'ALL';
+        const year = urlParams.get('year') || 'ALL';
+        const assigned = urlParams.get('assigned') || 'ALL';
+        const section = urlParams.get('section') || 'ALL';
+        
+        if (query) {
+           enriched = enriched.filter(s => s.rollNo.toLowerCase().includes(query) || s.name.toLowerCase().includes(query));
+        }
+        if (branch !== 'ALL') {
+           enriched = enriched.filter(s => s.branch === branch || s.branch.includes(branch) || branch.includes(s.branch));
+        }
+        if (year !== 'ALL') {
+           enriched = enriched.filter(s => s.year === year || s.year.includes(year) || year.includes(s.year));
+        }
+        if (assigned !== 'ALL') {
+           enriched = enriched.filter(s => (s.assignedTo || 'all').toLowerCase() === assigned.toLowerCase());
+        }
+        if (section !== 'ALL') {
+           enriched = enriched.filter(s => (s.section || '').toUpperCase() === section.toUpperCase());
+        }
+        
+        // Always sort by rollNo
+        enriched.sort((a,b) => a.rollNo.localeCompare(b.rollNo));
+        
+        const total = enriched.length;
+        const totalPages = Math.ceil(total / limit);
+        const startIdx = (page - 1) * limit;
+        const paginated = enriched.slice(startIdx, startIdx + limit);
+        
+        return sendJson(res, 200, { success: true, students: paginated, pagination: { total, page, limit, totalPages } });
       }
+
 
       if (req.method === 'POST') {
         if (!requireAdmin()) return;

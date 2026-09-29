@@ -1058,22 +1058,87 @@ const App = (() => {
     }
   }
 
-  function exportAttendanceCSV() {
+  
+  async function fetchExportData(scope = 'today', options = {}) {
+     const today = AttendanceManager.getTodayDateStr();
+     const queryParams = new URLSearchParams({ limit: 100000 });
+     
+     if (scope === 'today') {
+        queryParams.append('startDate', today);
+        queryParams.append('endDate', today);
+     } else if (scope === 'filtered') {
+        const startDate = document.getElementById('analyticsFilterStartDate')?.value;
+        const endDate = document.getElementById('analyticsFilterEndDate')?.value;
+        const branch = document.getElementById('analyticsFilterBranch')?.value;
+        const year = document.getElementById('analyticsFilterYear')?.value;
+        const section = document.getElementById('analyticsFilterSection')?.value;
+        const subject = document.getElementById('analyticsFilterSubject')?.value;
+        const employee = document.getElementById('analyticsFilterEmployee')?.value;
+        const search = document.getElementById('analyticsSearch')?.value;
+        
+        if (startDate) queryParams.append('startDate', startDate);
+        if (endDate) queryParams.append('endDate', endDate);
+        if (branch && branch !== 'ALL') queryParams.append('branch', branch);
+        if (year && year !== 'ALL') queryParams.append('year', year);
+        if (section && section !== 'ALL') queryParams.append('section', section);
+        if (subject) queryParams.append('subject', subject);
+        if (employee) queryParams.append('employee', employee);
+        if (search) queryParams.append('query', search);
+     }
+     
+     const res = await fetch('/api/attendance/history?' + queryParams.toString(), {
+        headers: { 'Authorization': 'Bearer ' + (localStorage.getItem('auth_token') || '') }
+     });
+     const data = await res.json();
+     if (!data.success) throw new Error(data.error || 'Failed to fetch export data from server');
+     return data.data; // The array of logs
+  }
+
+  async 
+
+  async function fetchExportData(scope = 'today', options = {}) {
+     const today = AttendanceManager.getTodayDateStr();
+     const queryParams = new URLSearchParams({ limit: 100000 });
+     
+     if (scope === 'today') {
+        queryParams.append('startDate', today);
+        queryParams.append('endDate', today);
+     } else if (scope === 'filtered') {
+        const startDate = document.getElementById('analyticsFilterStartDate')?.value;
+        const endDate = document.getElementById('analyticsFilterEndDate')?.value;
+        const branch = document.getElementById('analyticsFilterBranch')?.value;
+        const year = document.getElementById('analyticsFilterYear')?.value;
+        const section = document.getElementById('analyticsFilterSection')?.value;
+        const subject = document.getElementById('analyticsFilterSubject')?.value;
+        const employee = document.getElementById('analyticsFilterEmployee')?.value;
+        const search = document.getElementById('analyticsSearch')?.value;
+        
+        if (startDate) queryParams.append('startDate', startDate);
+        if (endDate) queryParams.append('endDate', endDate);
+        if (branch && branch !== 'ALL') queryParams.append('branch', branch);
+        if (year && year !== 'ALL') queryParams.append('year', year);
+        if (section && section !== 'ALL') queryParams.append('section', section);
+        if (subject) queryParams.append('subject', subject);
+        if (employee) queryParams.append('employee', employee);
+        if (search) queryParams.append('query', search);
+     }
+     
+     const res = await fetch('/api/attendance/history?' + queryParams.toString(), {
+        headers: { 'Authorization': 'Bearer ' + (localStorage.getItem('auth_token') || '') }
+     });
+     const data = await res.json();
+     if (!data.success) throw new Error(data.error || 'Failed to fetch export data from server');
+     return data.data; // The array of logs
+  }
+
+  async function exportAttendanceCSV() {
     try {
-      const query = document.getElementById('analyticsSearch')?.value || '';
-      const branch = document.getElementById('analyticsFilterBranch')?.value || 'ALL';
-      const year = document.getElementById('analyticsFilterYear')?.value || 'ALL';
-      const section = document.getElementById('analyticsFilterSection')?.value || 'ALL';
-      const date = document.getElementById('analyticsFilterDate')?.value || '';
-
-      const records = AttendanceManager.getFilteredLogs({
-        query,
-        branch,
-        year,
-        section,
-        date: date || null
-      });
-
+      showToast('Compiling CSV from backend...', 'info');
+      const records = await fetchExportData('filtered');
+      if (records.length === 0) {
+        showToast('No attendance records found matching current filters.', 'warning');
+        return;
+      }
       AttendanceManager.exportCSV(records);
       showToast(`Exported ${records.length} attendance records as CSV!`, 'success');
     } catch (e) {
@@ -1081,62 +1146,34 @@ const App = (() => {
     }
   }
 
-  /**
-   * Export the currently filtered attendance logs as a styled PDF report
-   */
-  function exportAttendancePDF() {
+  async function exportAttendancePDF() {
     try {
-      const query = document.getElementById('analyticsSearch')?.value || '';
-      const branch = document.getElementById('analyticsFilterBranch')?.value || 'ALL';
-      const year = document.getElementById('analyticsFilterYear')?.value || 'ALL';
-      const section = document.getElementById('analyticsFilterSection')?.value || 'ALL';
-      const date = document.getElementById('analyticsFilterDate')?.value || '';
-      const activeSession = 'Attendance';
-
-      const records = AttendanceManager.getFilteredLogs({
-        query,
-        branch,
-        year,
-        section,
-        date: date || null
-      });
-
+      showToast('Generating PDF from backend...', 'info');
+      const records = await fetchExportData('filtered');
+      
       if (records.length === 0) {
         showToast('No attendance records found matching current filters.', 'warning');
         return;
       }
 
-      const filterDesc = [
-        branch !== 'ALL' ? branch : null,
-        year !== 'ALL' ? year : null,
-        section !== 'ALL' ? `Sec ${section}` : null,
-        query ? `Search: "${query}"` : null,
-        date ? date : 'All Dates'
-      ].filter(Boolean).join(' • ') || 'All Filtered Records';
-
       AttendanceManager.exportPDF(records, {
         title: 'Present Students Attendance Report',
-        dateStr: date || AttendanceManager.getTodayDateStr(),
-        sessionName: activeSession,
-        filterDesc: filterDesc,
+        dateStr: AttendanceManager.getTodayDateStr(),
+        sessionName: 'Filtered View',
+        filterDesc: 'Filtered Records Export',
         uniqueOnly: false,
         includeSummary: true
       });
-
       showToast(`Downloaded PDF report (${records.length} records)!`, 'success');
     } catch (e) {
       showToast(e.message, 'warning');
     }
   }
 
-  /**
-   * Quick export of today's present students as a clean, deduplicated PDF report
-   */
-  function exportPresentTodayPDF() {
+  async function exportPresentTodayPDF() {
     try {
-      const today = AttendanceManager.getTodayDateStr();
-      const activeSession = 'Attendance';
-      const records = AttendanceManager.getFilteredLogs({ date: today });
+      showToast('Generating PDF from backend...', 'info');
+      const records = await fetchExportData('today');
 
       if (records.length === 0) {
         showToast('No students have checked in as present today yet.', 'warning');
@@ -1147,58 +1184,23 @@ const App = (() => {
 
       AttendanceManager.exportPDF(uniqueRecords, {
         title: "Today's Present Students Report",
-        dateStr: `${today} (Today)`,
-        sessionName: activeSession,
+        dateStr: `${AttendanceManager.getTodayDateStr()} (Today)`,
+        sessionName: 'Daily Check-ins',
         filterDesc: 'Today Check-ins (Unique Students)',
         uniqueOnly: true,
         includeSummary: true
       });
-
       showToast(`Downloaded PDF for ${uniqueRecords.length} present students!`, 'success');
     } catch (e) {
       showToast(e.message, 'warning');
     }
   }
 
-  /**
-   * Export present students for active session/day from the Admin Roster toolbar
-   */
-  function exportPresentStudentsPDF() {
-    try {
-      const today = AttendanceManager.getTodayDateStr();
-      const activeSession = 'Attendance';
-      
-      let records = AttendanceManager.getFilteredLogs({ date: today });
-      if (records.length === 0) {
-        records = AttendanceManager.getFilteredLogs({ date: today });
-      }
-
-      if (records.length === 0) {
-        showToast('No students are currently marked present for today.', 'warning');
-        return;
-      }
-
-      const uniqueRecords = AttendanceManager.deduplicateRecords(records);
-
-      AttendanceManager.exportPDF(uniqueRecords, {
-        title: `Present Students Report — ${activeSession}`,
-        dateStr: today,
-        sessionName: activeSession,
-        filterDesc: `${activeSession} • Unique Present Attendees`,
-        uniqueOnly: true,
-        includeSummary: true
-      });
-
-      showToast(`Exported ${uniqueRecords.length} present students as PDF!`, 'success');
-    } catch (e) {
-      showToast(e.message, 'warning');
-    }
+  async function exportPresentStudentsPDF() {
+     return exportPresentTodayPDF();
   }
 
-  /**
-   * Handle form submission from the Export Present modal
-   */
-  function submitExportPresentModal(event) {
+  async function submitExportPresentModal(event) {
     if (event) event.preventDefault();
 
     try {
@@ -1208,38 +1210,8 @@ const App = (() => {
       const uniqueOnly = document.getElementById('exportUniqueOnly')?.checked ?? true;
       const includeSummary = document.getElementById('exportIncludeSummary')?.checked ?? true;
 
-      const today = AttendanceManager.getTodayDateStr();
-      const activeSession = 'Attendance';
-
-      let records = [];
-      let title = 'Present Students Attendance Report';
-      let dateStr = today;
-      let filterDesc = 'Custom Report';
-
-      if (scope === 'today') {
-        records = AttendanceManager.getFilteredLogs({ date: today });
-        title = "Today's Present Students Report";
-        filterDesc = `Today (${today}) Check-ins`;
-      } else if (scope === 'filtered') {
-        const query = document.getElementById('analyticsSearch')?.value || '';
-        const branch = document.getElementById('analyticsFilterBranch')?.value || 'ALL';
-        const year = document.getElementById('analyticsFilterYear')?.value || 'ALL';
-        const date = document.getElementById('analyticsFilterDate')?.value || '';
-        records = AttendanceManager.getFilteredLogs({ query, branch, year, date: date || null });
-        title = 'Filtered Attendance Records Report';
-        dateStr = date || today;
-        filterDesc = [
-          branch !== 'ALL' ? branch : null,
-          year !== 'ALL' ? year : null,
-          query ? `Search: "${query}"` : null,
-          date ? `Date: ${date}` : 'All Dates'
-        ].filter(Boolean).join(' • ') || 'All Filtered Records';
-      } else {
-        records = AttendanceManager.getAllLogs();
-        title = 'All Historical Attendance Records';
-        dateStr = 'All-Time Records';
-        filterDesc = 'Complete Attendance Archive';
-      }
+      showToast('Fetching dataset from server...', 'info');
+      const records = await fetchExportData(scope);
 
       if (records.length === 0) {
         showToast('No records match the selected scope.', 'warning');
@@ -1247,38 +1219,30 @@ const App = (() => {
       }
 
       const finalRecords = uniqueOnly ? AttendanceManager.deduplicateRecords(records) : records;
+      
+      let title = scope === 'today' ? "Today's Present Students Report" : (scope === 'filtered' ? 'Filtered Attendance Records Report' : 'All Historical Attendance Records');
+      let dateStr = scope === 'today' ? AttendanceManager.getTodayDateStr() : (scope === 'filtered' ? 'Filtered Dates' : 'All-Time Records');
+      let filterDesc = scope === 'today' ? 'Today Check-ins' : (scope === 'filtered' ? 'Custom Report' : 'Complete Archive');
 
-      if (format === 'pdf') {
-        AttendanceManager.exportPDF(finalRecords, {
-          title,
-          dateStr,
-          sessionName: activeSession,
-          filterDesc,
-          uniqueOnly: false, // already deduplicated above if checked
-          includeSummary
-        });
-        showToast(`Downloaded PDF with ${finalRecords.length} present records!`, 'success');
-      } else if (format === 'csv') {
-        AttendanceManager.exportCSV(finalRecords, {
-          uniqueOnly: false,
-          filename: `Present_Students_${scope}_${today}.csv`
-        });
-        showToast(`Exported CSV with ${finalRecords.length} present records!`, 'success');
+      if (format === 'csv') {
+        AttendanceManager.exportCSV(finalRecords, { uniqueOnly, filename: `Export_${scope}_${Date.now()}.csv` });
       } else if (format === 'print') {
-        AttendanceManager.printReport(finalRecords, {
-          title,
-          dateStr,
-          sessionName: activeSession,
-          uniqueOnly: false
-        });
-        showToast(`Opened print preview for ${finalRecords.length} present records.`, 'info');
+        AttendanceManager.exportPDF(finalRecords, { title, dateStr, sessionName: 'Attendance', filterDesc, includeSummary });
+        // The pdf library opens print dialog if print options are passed, 
+        // for now just generating PDF since we don't have a native HTML print format for 10k rows
+      } else {
+        AttendanceManager.exportPDF(finalRecords, { title, dateStr, sessionName: 'Attendance', filterDesc, includeSummary });
       }
 
       closeModal('modalExportPresent');
+      showToast(`Official Report exported (${finalRecords.length} records).`, 'success');
     } catch (e) {
       showToast(e.message, 'warning');
     }
   }
+
+
+
 
   function bindSimulator() {
     // Quick simulator chip listeners handled inline or via delegate
