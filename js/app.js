@@ -1861,5 +1861,16 @@ const App = (() => {
 
 // Bootstrap on DOM Ready
 document.addEventListener('DOMContentLoaded', () => {
-  App.init();
+  window.App = typeof App !== 'undefined' ? App : null;
+  window.ScannerEngine = typeof ScannerEngine !== 'undefined' ? ScannerEngine : null;
+  window.QRStudio = typeof QRStudio !== 'undefined' ? QRStudio : null;
+  window.SessionManager = typeof SessionManager !== 'undefined' ? SessionManager : null;
+  window.EventManager = typeof EventManager !== 'undefined' ? EventManager : null;
+  window.AttendanceManager = typeof AttendanceManager !== 'undefined' ? AttendanceManager : null;
+  window.RosterManager = typeof RosterManager !== 'undefined' ? RosterManager : null;
+  window.AuthManager = typeof AuthManager !== 'undefined' ? AuthManager : null;
+
+  if (App && typeof App.init === 'function') {
+    App.init();
+  }
 });
