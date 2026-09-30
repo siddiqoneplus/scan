@@ -1,1 +1,14 @@
-[]
+[
+  {
+    "sessionId": "session-1790747847724",
+    "date": "2026-09-30",
+    "period": "1",
+    "subject": "Data Structures",
+    "employee": "admin",
+    "branch": "",
+    "year": "",
+    "section": "A",
+    "startTime": "2026-09-30T05:57:27.724Z",
+    "status": "active"
+  }
+]
