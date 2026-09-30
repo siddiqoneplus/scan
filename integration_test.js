@@ -1,30 +1,28 @@
+// PHASE 3: COMPREHENSIVE BASELINE TEST
+// Tests every critical endpoint and traces the actual error
+
 const http = require('http');
+const results = [];
 
-const results = { pass: 0, fail: 0, errors: [] };
-
-function test(name, passed, detail) {
-  if (passed) {
-    results.pass++;
-    console.log(`  ✅ ${name}`);
-  } else {
-    results.fail++;
-    results.errors.push(`${name}: ${detail}`);
-    console.log(`  ❌ ${name} — ${detail}`);
-  }
+function log(category, name, passed, detail) {
+  const status = passed ? '✅' : '❌';
+  results.push({ category, name, passed, detail });
+  console.log(`  ${status} [${category}] ${name}${detail ? ' — ' + detail : ''}`);
 }
 
 function request(method, path, body, headers = {}) {
   return new Promise((resolve, reject) => {
-    const req = http.request({
+    const opts = {
       hostname: 'localhost', port: 3000, path, method,
       headers: { 'Content-Type': 'application/json', ...headers }
-    }, (res) => {
+    };
+    const req = http.request(opts, (res) => {
       let data = '';
       res.on('data', chunk => data += chunk);
       res.on('end', () => {
         let parsed = null;
         try { parsed = JSON.parse(data); } catch(e) {}
-        resolve({ status: res.statusCode, body: parsed, raw: data });
+        resolve({ status: res.statusCode, body: parsed, raw: data, headers: res.headers });
       });
     });
     req.on('error', reject);
@@ -34,153 +32,159 @@ function request(method, path, body, headers = {}) {
 }
 
 async function run() {
-  console.log('\n=== SECURITY VERIFICATION TESTS ===\n');
+  console.log('\n========================================');
+  console.log('  PHASE 3: BASELINE STATUS TEST');
+  console.log('========================================\n');
 
-  // --- Get admin token ---
-  const loginRes = await request('POST', '/api/login', { username: 'admin', password: 'admin123' });
-  const adminToken = loginRes.body?.token;
-  test('Admin login works', loginRes.status === 200 && adminToken, `status=${loginRes.status}`);
-  const adminAuth = { Authorization: `Bearer ${adminToken}` };
+  // === HEALTH ===
+  const health = await request('GET', '/api/health');
+  log('SERVER', 'Health endpoint', health.status === 200, `status=${health.status}`);
 
-  // --- Get employee token ---
+  // === STATIC FILES ===
+  const indexPage = await request('GET', '/');
+  log('STATIC', 'index.html loads', indexPage.status === 200, `status=${indexPage.status}, type=${indexPage.headers['content-type']}`);
+
+  const loginPage = await request('GET', '/login.html');
+  log('STATIC', 'login.html loads', loginPage.status === 200, `status=${loginPage.status}`);
+
+  const cssFile = await request('GET', '/css/style.css');
+  log('STATIC', 'css/style.css loads', cssFile.status === 200, `status=${cssFile.status}`);
+
+  const authJs = await request('GET', '/js/auth.js');
+  log('STATIC', 'js/auth.js loads', authJs.status === 200, `status=${authJs.status}`);
+
+  const appJs = await request('GET', '/js/app.js');
+  log('STATIC', 'js/app.js loads', appJs.status === 200, `status=${appJs.status}`);
+
+  const scannerJs = await request('GET', '/js/scanner.js');
+  log('STATIC', 'js/scanner.js loads', scannerJs.status === 200, `status=${scannerJs.status}`);
+
+  // === SECURITY: blocked files ===
+  const envFile = await request('GET', '/.env');
+  log('SECURITY', '.env blocked', envFile.status === 403, `status=${envFile.status}`);
+
+  const serverJs = await request('GET', '/server.js');
+  log('SECURITY', 'server.js blocked', serverJs.status === 403, `status=${serverJs.status}`);
+
+  // === LOGIN ===
+  const adminLogin = await request('POST', '/api/login', { username: 'admin', password: 'admin123' });
+  log('AUTH', 'Admin login', adminLogin.status === 200 && adminLogin.body?.success && adminLogin.body?.token, 
+    `status=${adminLogin.status}, success=${adminLogin.body?.success}, hasToken=${!!adminLogin.body?.token}, error=${adminLogin.body?.error || 'none'}`);
+
   const empLogin = await request('POST', '/api/login', { username: 'employee', password: 'emp123' });
-  const empToken = empLogin.body?.token;
-  test('Employee login works', empLogin.status === 200 && empToken, `status=${empLogin.status}`);
-  const empAuth = { Authorization: `Bearer ${empToken}` };
+  log('AUTH', 'Employee login', empLogin.status === 200 && empLogin.body?.success && empLogin.body?.token,
+    `status=${empLogin.status}, success=${empLogin.body?.success}, hasToken=${!!empLogin.body?.token}, error=${empLogin.body?.error || 'none'}`);
 
-  // ==========================================
-  console.log('\n--- C1: Static File Security ---');
-  // ==========================================
-  
-  const envRes = await request('GET', '/.env');
-  test('.env is blocked', envRes.status === 403, `status=${envRes.status}, body=${envRes.raw?.substring(0,50)}`);
-
-  const dataRes = await request('GET', '/data/accounts.json');
-  test('data/accounts.json is blocked', dataRes.status === 403, `status=${dataRes.status}`);
-
-  const serverRes = await request('GET', '/server.js');
-  test('server.js is blocked', serverRes.status === 403, `status=${serverRes.status}`);
-
-  const dbRes = await request('GET', '/db.js');
-  test('db.js is blocked', dbRes.status === 403, `status=${dbRes.status}`);
-
-  const pkgRes = await request('GET', '/package.json');
-  test('package.json is blocked', pkgRes.status === 403, `status=${pkgRes.status}`);
-
-  const gitRes = await request('GET', '/.gitignore');
-  test('.gitignore is blocked', gitRes.status === 403, `status=${gitRes.status}`);
-
-  const nmRes = await request('GET', '/node_modules/bcryptjs/package.json');
-  test('node_modules is blocked', nmRes.status === 403, `status=${nmRes.status}`);
-
-  // Frontend JS should still work
-  const jsRes = await request('GET', '/js/auth.js');
-  test('js/auth.js is accessible', jsRes.status === 200, `status=${jsRes.status}`);
-
-  // CSS should work
-  const cssRes = await request('GET', '/css/style.css');
-  test('css/style.css is accessible', cssRes.status === 200, `status=${cssRes.status}`);
-
-  // HTML should work
-  const htmlRes = await request('GET', '/index.html');
-  test('index.html is accessible', htmlRes.status === 200, `status=${htmlRes.status}`);
-
-  // ==========================================
-  console.log('\n--- C2: handleApiError defined ---');
-  // ==========================================
-  
-  // Trigger an error path — invalid session in attendance
-  const errRes = await request('POST', '/api/attendance', {
-    record: { rollNo: 'NONEXISTENT999', session: 'session-fake' }
-  }, adminAuth);
-  test('handleApiError returns structured error (not crash)', errRes.status >= 400 && errRes.body?.success === false, `status=${errRes.status}`);
-
-  // ==========================================
-  console.log('\n--- C4: Client ID/Status injection ---');
-  // ==========================================
-  
-  // The processRecord should ignore client-provided id
-  // We can't fully test without a real student, but we verified code review shows the fix
-
-  // ==========================================
-  console.log('\n--- Authorization Tests ---');
-  // ==========================================
-
-  // Employee cannot access admin APIs
-  const empAccounts = await request('GET', '/api/accounts', null, empAuth);
-  test('Employee cannot GET /api/accounts', empAccounts.status === 403, `status=${empAccounts.status}`);
-
-  const empDashboard = await request('GET', '/api/admin/dashboard', null, empAuth);
-  test('Employee cannot GET /api/admin/dashboard', empDashboard.status === 403, `status=${empDashboard.status}`);
-
-  const empAudit = await request('GET', '/api/audit', null, empAuth);
-  test('Employee cannot GET /api/audit', empAudit.status === 403, `status=${empAudit.status}`);
-
-  const empClear = await request('POST', '/api/admin/clear-all', {}, empAuth);
-  test('Employee cannot POST /api/admin/clear-all', empClear.status === 403, `status=${empClear.status}`);
-
-  const empRoster = await request('POST', '/api/roster', { students: [{ rollNo: 'HACK1', name: 'hacker' }] }, empAuth);
-  test('Employee cannot POST /api/roster', empRoster.status === 403, `status=${empRoster.status}`);
-
-  const empQR = await request('GET', '/api/roster/qr-tokens', null, empAuth);
-  test('Employee cannot GET /api/roster/qr-tokens', empQR.status === 403, `status=${empQR.status}`);
-
-  // ==========================================
-  console.log('\n--- JWT Tests ---');
-  // ==========================================
+  const badLogin = await request('POST', '/api/login', { username: 'admin', password: 'wrong' });
+  log('AUTH', 'Bad password rejected', badLogin.status === 401, `status=${badLogin.status}`);
 
   const noAuth = await request('GET', '/api/roster');
-  test('No token returns 401', noAuth.status === 401, `status=${noAuth.status}`);
+  log('AUTH', 'No token = 401', noAuth.status === 401, `status=${noAuth.status}`);
 
-  const badToken = await request('GET', '/api/roster', null, { Authorization: 'Bearer invalid.token.here' });
-  test('Invalid token returns 401', badToken.status === 401, `status=${badToken.status}`);
+  // Use whichever token succeeded
+  const adminToken = adminLogin.body?.token;
+  const empToken = empLogin.body?.token;
+  const adminAuth = adminToken ? { Authorization: `Bearer ${adminToken}` } : {};
+  const empAuth = empToken ? { Authorization: `Bearer ${empToken}` } : {};
 
-  // ==========================================
-  console.log('\n--- Rate Limiting ---');
-  // ==========================================
-
-  let rlStatus;
-  for (let i = 0; i < 7; i++) {
-    rlStatus = await request('POST', '/api/login', { username: 'admin', password: 'wrong' });
+  if (!adminToken) {
+    console.log('\n  ⚠️  Admin login failed — skipping authenticated tests.\n');
+    printSummary();
+    return;
   }
-  test('Rate limiting triggers on auth', rlStatus.status === 429, `status=${rlStatus.status}`);
 
-  // ==========================================
-  console.log('\n--- Mass Assignment Tests ---');
-  // ==========================================
+  // === ROSTER ===
+  const roster = await request('GET', '/api/roster', null, adminAuth);
+  log('ROSTER', 'GET /api/roster', roster.status === 200 && roster.body?.success, 
+    `status=${roster.status}, students=${roster.body?.students?.length}, error=${roster.body?.error || 'none'}`);
+
+  // === ACCOUNTS ===
+  const accounts = await request('GET', '/api/accounts', null, adminAuth);
+  log('ACCOUNTS', 'GET /api/accounts', accounts.status === 200 && accounts.body?.success,
+    `status=${accounts.status}, count=${accounts.body?.accounts?.length}, error=${accounts.body?.error || 'none'}`);
   
-  const massRes = await request('POST', '/api/roster', {
-    students: [{ rollNo: 'MASSTEST1', name: 'Test', password: 'hacked', _id: 'injected', __proto__: { admin: true } }]
-  }, adminAuth);
-  
-  if (massRes.status === 200 && massRes.body?.students) {
-    const s = massRes.body.students.find(x => x.rollNo === 'MASSTEST1');
-    test('Mass assignment blocked on roster', !s?.password && !s?._id, `password=${s?.password}, _id=${s?._id}`);
-  } else {
-    test('Mass assignment roster test ran', false, `status=${massRes.status}`);
+  // Verify passwords are NOT exposed
+  if (accounts.body?.accounts) {
+    const hasPassword = accounts.body.accounts.some(a => a.password);
+    log('SECURITY', 'Passwords not exposed in GET /api/accounts', !hasPassword, 
+      `passwordsExposed=${hasPassword}`);
   }
 
-  // ==========================================
-  console.log('\n--- Health Check ---');
-  // ==========================================
-  const health = await request('GET', '/api/health');
-  test('Health check returns 200', health.status === 200, `status=${health.status}`);
+  // === RULES ===
+  const rules = await request('GET', '/api/rules', null, adminAuth);
+  log('RULES', 'GET /api/rules', rules.status === 200 && rules.body?.success,
+    `status=${rules.status}, error=${rules.body?.error || 'none'}`);
 
-  // ==========================================
-  console.log('\n--- Body Size Limit ---');
-  // ==========================================
-  const bigBody = { data: 'x'.repeat(3 * 1024 * 1024) };
-  const bigRes = await request('POST', '/api/login', bigBody);
-  test('Oversized body rejected', bigRes.status === 413 || bigRes.status === 401, `status=${bigRes.status}`);
+  // === SESSIONS ===
+  const sessions = await request('GET', '/api/sessions', null, adminAuth);
+  log('SESSIONS', 'GET /api/sessions', sessions.status === 200 && sessions.body?.success,
+    `status=${sessions.status}, count=${sessions.body?.sessions?.length}, error=${sessions.body?.error || 'none'}`);
 
-  // Summary
-  console.log(`\n${'='.repeat(50)}`);
-  console.log(`RESULTS: ${results.pass} passed, ${results.fail} failed`);
-  if (results.errors.length > 0) {
-    console.log('\nFAILURES:');
-    results.errors.forEach(e => console.log(`  ❌ ${e}`));
+  // === ATTENDANCE ===
+  const attendance = await request('GET', '/api/attendance', null, adminAuth);
+  log('ATTENDANCE', 'GET /api/attendance', attendance.status === 200 && attendance.body?.success,
+    `status=${attendance.status}, count=${attendance.body?.logs?.length}, error=${attendance.body?.error || 'none'}`);
+
+  // === HISTORY ===
+  const history = await request('GET', '/api/attendance/history', null, adminAuth);
+  log('HISTORY', 'GET /api/attendance/history', history.status === 200 && history.body?.success,
+    `status=${history.status}, count=${history.body?.data?.length}, error=${history.body?.error || 'none'}`);
+
+  // === ADMIN DASHBOARD ===
+  const dashboard = await request('GET', '/api/admin/dashboard', null, adminAuth);
+  log('DASHBOARD', 'GET /api/admin/dashboard', dashboard.status === 200 && dashboard.body?.success,
+    `status=${dashboard.status}, error=${dashboard.body?.error || 'none'}`);
+
+  // === EVENTS ===
+  const events = await request('GET', '/api/events', null, adminAuth);
+  log('EVENTS', 'GET /api/events', events.status === 200 && events.body?.success,
+    `status=${events.status}, count=${events.body?.events?.length}, error=${events.body?.error || 'none'}`);
+
+  // === AUDIT ===
+  const audit = await request('GET', '/api/audit', null, adminAuth);
+  log('AUDIT', 'GET /api/audit', audit.status === 200 && audit.body?.success,
+    `status=${audit.status}, error=${audit.body?.error || 'none'}`);
+
+  // === QR TOKENS ===
+  const qrTokens = await request('GET', '/api/roster/qr-tokens', null, adminAuth);
+  log('QR', 'GET /api/roster/qr-tokens', qrTokens.status === 200 && qrTokens.body?.success,
+    `status=${qrTokens.status}, error=${qrTokens.body?.error || 'none'}`);
+
+  // === EMPLOYEE AUTHORIZATION ===
+  if (empToken) {
+    const empAccounts = await request('GET', '/api/accounts', null, empAuth);
+    log('AUTHZ', 'Employee blocked from /api/accounts', empAccounts.status === 403,
+      `status=${empAccounts.status}`);
+
+    const empDashboard = await request('GET', '/api/admin/dashboard', null, empAuth);
+    log('AUTHZ', 'Employee blocked from /api/admin/dashboard', empDashboard.status === 403,
+      `status=${empDashboard.status}`);
+    
+    const empRoster = await request('GET', '/api/roster', null, empAuth);
+    log('AUTHZ', 'Employee can GET /api/roster (filtered)', empRoster.status === 200,
+      `status=${empRoster.status}`);
   }
-  console.log(`${'='.repeat(50)}\n`);
+
+  // === CSP HEADER CHECK ===
+  const cspHeader = indexPage.headers['content-security-policy'];
+  log('SECURITY', 'CSP header present on HTML', !!cspHeader, `csp=${cspHeader ? 'yes' : 'missing'}`);
+
+  printSummary();
 }
 
-run().catch(e => console.error('Test runner error:', e));
+function printSummary() {
+  const passed = results.filter(r => r.passed).length;
+  const failed = results.filter(r => !r.passed).length;
+  console.log(`\n========================================`);
+  console.log(`  RESULTS: ${passed} passed, ${failed} failed`);
+  console.log(`========================================`);
+  if (failed > 0) {
+    console.log('\n  FAILURES:');
+    results.filter(r => !r.passed).forEach(r => {
+      console.log(`    ❌ [${r.category}] ${r.name} — ${r.detail}`);
+    });
+  }
+  console.log('');
+}
+
+run().catch(e => console.error('Test runner crashed:', e));

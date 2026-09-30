@@ -1808,6 +1808,7 @@ const App = (() => {
     testDatabaseConnection,
     submitDatabaseConfig,
     checkDatabaseStatus,
+    refreshAdminDashboard,
     submitAddStudent,
     openEditStudentModal,
     submitEditStudent,
@@ -1843,6 +1844,7 @@ const App = (() => {
     deleteAccountEntry,
     renderAccountsTable,
     filterRoster: () => renderRosterTable(),
+    changeAnalyticsPage: (dir) => { /* pagination stub — analytics uses its own pagination */ },
     // Event Management
     renderEventSelector,
     handleEventSwitch,
