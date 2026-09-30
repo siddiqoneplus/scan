@@ -47,7 +47,9 @@ const App = (() => {
 
     // Start scanner if on scanner tab
     setTimeout(() => {
-      ScannerEngine.startCamera();
+      if (activeTab === 'scanner') {
+        ScannerEngine.startCamera();
+      }
     }, 400);
 
     // Listen for roster updates
@@ -175,6 +177,15 @@ const App = (() => {
     // QR Cards Studio is Admin-only
     const cardsTab = document.getElementById('tabBtnCards');
     if (cardsTab) cardsTab.style.display = isAdmin ? '' : 'none';
+
+    // Scanner is Employee-only
+    const scannerTab = document.getElementById('tabBtnScanner');
+    if (scannerTab) scannerTab.style.display = isAdmin ? 'none' : '';
+
+    // If admin, switch away from scanner by default
+    if (isAdmin && activeTab === 'scanner') {
+       switchTab('roster');
+    }
 
     // Admin-only elements (manage accounts button, add/import/clear buttons, rules)
     document.querySelectorAll('.admin-only-el').forEach(el => {
